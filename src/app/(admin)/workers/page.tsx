@@ -24,6 +24,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 interface WorkerForm {
   name: string;
@@ -56,6 +57,7 @@ export default function WorkersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<WorkerForm>(emptyForm);
+  const { confirm, confirmDialog } = useConfirm();
 
   useEffect(() => {
     api.getUsers().then(setUsers).catch(console.error);
@@ -115,7 +117,7 @@ export default function WorkersPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Apakah Anda yakin ingin menghapus pekerja ini?")) return;
+    const ok = await confirm("Hapus Pekerja", "Yakin ingin menghapus data pekerja ini?"); if (!ok) return;
     setUsers(prev => prev.filter(u => u.id !== id));
     try {
       await api.deleteUser(id);
@@ -319,6 +321,7 @@ export default function WorkersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </div>
   );
 }

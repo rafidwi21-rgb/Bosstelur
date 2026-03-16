@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const emptyHouse = {
   name: "",
@@ -51,6 +52,7 @@ export default function HousesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyHouse);
+  const { confirm, confirmDialog } = useConfirm();
 
   useEffect(() => {
     api.getHouses().then(setHouses).catch(console.error);
@@ -88,7 +90,7 @@ export default function HousesPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Are you sure you want to delete this house?")) return;
+    const ok = await confirm("Hapus Kandang", "Yakin ingin menghapus kandang ini? Semua data terkait juga akan dihapus."); if (!ok) return;
     // Optimistic: remove immediately from UI
     setHouses(prev => prev.filter(h => h.id !== id));
     try {
@@ -276,6 +278,7 @@ export default function HousesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </div>
   );
 }

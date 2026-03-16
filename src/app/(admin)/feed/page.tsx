@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Package, TrendingUp, AlertTriangle, Plus, Pencil, Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 function formatCurrency(n: number) { return `Rp ${n.toLocaleString("id-ID")}`; }
 function formatDate(d: string) { try { return new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }); } catch { return d; } }
@@ -25,6 +26,7 @@ export default function FeedPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FeedForm>(emptyForm);
+  const { confirm, confirmDialog } = useConfirm();
 
   const reload = async () => {
     const [inv, usage] = await Promise.all([api.getFeedInventory(), api.getFeedUsage()]);
@@ -71,7 +73,7 @@ export default function FeedPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Hapus pakan ini?")) return;
+    const ok = await confirm("Hapus Pakan", "Yakin ingin menghapus data pakan ini?"); if (!ok) return;
     setInventory(prev => prev.filter(f => f.id !== id));
     try { await api.deleteFeedInventory(id); } catch { await reload(); }
   }
@@ -235,6 +237,7 @@ export default function FeedPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </div>
   );
 }
