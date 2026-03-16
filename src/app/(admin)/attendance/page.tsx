@@ -49,22 +49,18 @@ export default function AttendancePage() {
   const [filterDate, setFilterDate] = useState(store.todayStr());
 
   useEffect(() => {
-    api.getAttendance().then(setAttendance).catch(console.error);
-  }, []);
+    api.getAttendance(filterDate).then(setAttendance).catch(console.error);
+  }, [filterDate]);
 
-  // Group attendance by user for the selected date
+  // Group attendance by user
   const attendanceRows = useMemo(() => {
-    const dayRecords = attendance.filter((a: any) =>
-      a.timestamp.startsWith(filterDate)
-    );
-
     const userMap = new Map<string, AttendanceRow>();
 
-    dayRecords.forEach((a: any) => {
+    attendance.forEach((a: any) => {
       if (!userMap.has(a.userId)) {
         userMap.set(a.userId, {
           userId: a.userId,
-          userName: a.userName,
+          userName: a.user?.name || a.userName || "-",
           checkIn: null,
           checkOut: null,
         });
@@ -78,7 +74,7 @@ export default function AttendancePage() {
     });
 
     return Array.from(userMap.values());
-  }, [attendance, filterDate]);
+  }, [attendance]);
 
   // Summary stats
   const workersPresent = attendanceRows.length;
