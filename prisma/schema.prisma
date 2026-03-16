@@ -1,15 +1,208 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  WORKER
+}
+
+enum TaskType {
+  FEEDING
+  EGG_COLLECTION
+  CLEANING
+  WATER_CHECK
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum AttendanceType {
+  CHECK_IN
+  CHECK_OUT
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(WORKER)
+  phone     String?
+  address   String?
+  salary    Float?
+  startDate DateTime? @db.Date
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attendances     Attendance[]
+  taskAssignments TaskAssignment[]
+  eggProductions  EggProduction[]
+  feedUsages      FeedUsage[]
+  eggSales        EggSale[]
+
+  @@map("users")
+}
+
+model PoultryHouse {
+  id           String   @id @default(cuid())
+  name         String
+  capacity     Int
+  currentCount Int      @default(0)
+  birdType     String   @default("Layer")
+  birdAge      String?
+  status       String   @default("ACTIVE")
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tasks          Task[]
+  eggProductions EggProduction[]
+  feedUsages     FeedUsage[]
+
+  @@map("poultry_houses")
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  title       String
+  type        TaskType
+  timeSlot    String   @default("MORNING")
+  isRecurring Boolean  @default(true)
+  houseId     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  house       PoultryHouse? @relation(fields: [houseId], references: [id])
+  assignments TaskAssignment[]
+
+  @@map("tasks")
+}
+
+model TaskAssignment {
+  id           String     @id @default(cuid())
+  taskId       String
+  workerId     String
+  assignedDate DateTime   @db.Date
+  status       TaskStatus @default(PENDING)
+  startedAt    DateTime?
+  completedAt  DateTime?
+  notes        String?
+  feedQuantity Float?
+  eggsKg       Float?
+  eggsUnit     Int?
+  eggsBrokenUnit Int?
+  waterStatus  String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  task   Task @relation(fields: [taskId], references: [id])
+  worker User @relation(fields: [workerId], references: [id])
+
+  @@unique([taskId, workerId, assignedDate])
+  @@map("task_assignments")
+}
+
+model EggProduction {
+  id          String   @id @default(cuid())
+  houseId     String
+  collectedBy String
+  date        DateTime @db.Date
+  totalKg     Float
+  totalUnit   Int      @default(0)
+  brokenKg    Float    @default(0)
+  brokenUnit  Int      @default(0)
+  goodKg      Float    @default(0)
+  goodUnit    Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  house     PoultryHouse @relation(fields: [houseId], references: [id])
+  collector User         @relation(fields: [collectedBy], references: [id])
+
+  @@map("egg_productions")
+}
+
+model FeedInventory {
+  id           String    @id @default(cuid())
+  feedType     String
+  quantity     Float
+  unit         String    @default("kg")
+  costPerUnit  Float
+  supplier     String?
+  purchaseDate DateTime  @db.Date
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  usages FeedUsage[]
+
+  @@map("feed_inventory")
+}
+
+model FeedUsage {
+  id        String   @id @default(cuid())
+  feedId    String
+  houseId   String
+  usedBy    String
+  date      DateTime @db.Date
+  quantity  Float
+  notes     String?
+  createdAt DateTime @default(now())
+
+  feed   FeedInventory @relation(fields: [feedId], references: [id])
+  house  PoultryHouse  @relation(fields: [houseId], references: [id])
+  worker User          @relation(fields: [usedBy], references: [id])
+
+  @@map("feed_usages")
+}
+
+model Attendance {
+  id        String         @id @default(cuid())
+  userId    String
+  type      AttendanceType
+  timestamp DateTime       @default(now())
+  photoUrl  String?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("attendances")
+}
+
+model EggSale {
+  id            String   @id @default(cuid())
+  date          DateTime @db.Date
+  buyerName     String   @default("-")
+  quantity      Float
+  pricePerUnit  Float
+  unit          String   @default("kg")
+  totalAmount   Float
+  paymentMethod String   @default("TUNAI")
+  isPaid        Boolean  @default(true)
+  recordedBy    String
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  recorder User @relation(fields: [recordedBy], references: [id])
+
+  @@map("egg_sales")
+}
+
+model OperationalExpense {
+  id          String   @id @default(cuid())
+  category    String
+  description String
+  amount      Float
+  date        DateTime @db.Date
+  vendor      String?
+  createdAt   DateTime @default(now())
+
+  @@map("operational_expenses")
 }
