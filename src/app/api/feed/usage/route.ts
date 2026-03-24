@@ -54,26 +54,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const usage = await prisma.feedUsage.create({
-      data: {
-        feedId,
-        houseId,
-        usedBy,
-        date: new Date(date),
-        quantity,
-      },
-      include: {
-        feed: {
-          select: { feedType: true },
+    // Create usage record and decrease inventory quantity
+    const [usage] = await prisma.$transaction([
+      prisma.feedUsage.create({
+        data: {
+          feedId,
+          houseId,
+          usedBy,
+          date: new Date(date),
+          quantity,
         },
-        house: {
-          select: { name: true },
+        include: {
+          feed: {
+            select: { feedType: true },
+          },
+          house: {
+            select: { name: true },
+          },
+          worker: {
+            select: { name: true },
+          },
         },
-        worker: {
-          select: { name: true },
-        },
-      },
-    });
+      }),
+      prisma.feedInventory.update({
+        where: { id: feedId },
+        data: { quantity: { decrement: quantity } },
+      }),
+    ]);
 
     return NextResponse.json(usage, { status: 201 });
   } catch (error) {

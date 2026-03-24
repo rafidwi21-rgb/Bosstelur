@@ -100,8 +100,18 @@ export default function WorkerPage() {
   };
   const setInput = (id: string, k: string, v: string | number) => setTaskInputs(prev => ({ ...prev, [id]: { ...prev[id], [k]: v } }));
 
+  const isTaskInputValid = (task: any) => {
+    const inp = taskInputs[task.id] || {};
+    if (task.taskType === "FEEDING") return Number(inp.feedQuantity) > 0;
+    if (task.taskType === "EGG_COLLECTION") return Number(inp.eggsKg) > 0 || Number(inp.eggsUnit) > 0;
+    if (task.taskType === "CLEANING") return ((inp.notes as string) || "").trim().length > 0;
+    if (task.taskType === "WATER_CHECK") return true; // always has default "Normal"
+    return true;
+  };
+
   const completeTask = async (task: any) => {
     if (!user) return;
+    if (!isTaskInputValid(task)) return;
     const inp = taskInputs[task.id] || {};
     const isEdit = editingId === task.id;
     const upd: any = { status: "COMPLETED", completedAt: new Date().toISOString() };
@@ -113,7 +123,6 @@ export default function WorkerPage() {
       if (!isEdit && upd.feedQuantity > 0) {
         try {
           let feeds = await api.getFeedInventory();
-          // Auto-create default feed if none exists
           if (feeds.length === 0) {
             await api.createFeedInventory({ feedType: "Pakan Ayam", quantity: 1000, unit: "kg", costPerUnit: 8500, supplier: "-", purchaseDate: today });
             feeds = await api.getFeedInventory();
@@ -290,7 +299,7 @@ export default function WorkerPage() {
                   )}
                   <div className="flex gap-2">
                     {editing && <Button variant="outline" className="flex-1 h-11 rounded-lg border-[#1e1e1e] text-[#6b6b6b] hover:bg-[#161616]" onClick={() => setEditingId(null)}>Batal</Button>}
-                    <Button className={`${editing ? "flex-1" : "w-full"} h-11 font-semibold rounded-lg bg-[#3ecf8e] text-black hover:bg-[#4ae39e]`} onClick={() => completeTask(task)}>
+                    <Button className={`${editing ? "flex-1" : "w-full"} h-11 font-semibold rounded-lg bg-[#3ecf8e] text-black hover:bg-[#4ae39e] disabled:opacity-40 disabled:cursor-not-allowed`} onClick={() => completeTask(task)} disabled={!isTaskInputValid(task)}>
                       <CheckCircle2 className="mr-2 size-4" />{editing ? "Simpan" : "Selesai"}
                     </Button>
                   </div>

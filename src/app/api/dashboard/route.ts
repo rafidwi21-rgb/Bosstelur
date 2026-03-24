@@ -104,7 +104,7 @@ export async function GET() {
       0
     );
 
-    // Monthly expenses
+    // Monthly expenses = operational expenses + feed usage cost
     const monthlyExpenseRecords = await prisma.operationalExpense.findMany({
       where: {
         date: {
@@ -113,10 +113,31 @@ export async function GET() {
         },
       },
     });
-    const monthlyExpenses = monthlyExpenseRecords.reduce(
+    const monthlyOperationalExpenses = monthlyExpenseRecords.reduce(
       (sum, e) => sum + e.amount,
       0
     );
+
+    // Feed usage cost for the month
+    const monthlyFeedUsages = await prisma.feedUsage.findMany({
+      where: {
+        date: {
+          gte: monthStart,
+          lte: monthEnd,
+        },
+      },
+      include: {
+        feed: {
+          select: { costPerUnit: true },
+        },
+      },
+    });
+    const monthlyFeedCost = monthlyFeedUsages.reduce(
+      (sum, u) => sum + u.quantity * (u.feed?.costPerUnit || 0),
+      0
+    );
+
+    const monthlyExpenses = monthlyOperationalExpenses + monthlyFeedCost;
 
     // Active houses with today's production
     const activeHouses = await prisma.poultryHouse.findMany({

@@ -91,15 +91,21 @@ export default function AttendancePage() {
     });
   }, [attendanceRows]);
 
+  // Convert UTC timestamp to WIB (UTC+7) hours and minutes
+  function getWIBTime(timestamp: string) {
+    const utc = new Date(timestamp);
+    const wibMs = utc.getTime() + 7 * 60 * 60 * 1000;
+    const wib = new Date(wibMs);
+    return { hour: wib.getUTCHours(), minute: wib.getUTCMinutes() };
+  }
+
   const onTimePercentage = useMemo(() => {
     const checkIns = attendanceRows.filter((r) => r.checkIn);
     if (checkIns.length === 0) return 0;
+    // On time if check-in before 07:00 WIB
     const onTime = checkIns.filter((r) => {
-      const time = new Date(r.checkIn!.timestamp);
-      const hour = time.getHours();
-      const minute = time.getMinutes();
-      // On time if check-in before 08:00
-      return hour < 8 || (hour === 8 && minute === 0);
+      const { hour, minute } = getWIBTime(r.checkIn!.timestamp);
+      return hour < 7 || (hour === 7 && minute === 0);
     });
     return Math.round((onTime.length / checkIns.length) * 100);
   }, [attendanceRows]);
@@ -108,13 +114,13 @@ export default function AttendancePage() {
     label: string;
     variant: "default" | "secondary" | "destructive";
   } {
-    if (!row.checkIn) return { label: "Absent", variant: "destructive" };
-    const time = new Date(row.checkIn.timestamp);
-    const hour = time.getHours();
-    if (hour < 8 || (hour === 8 && time.getMinutes() === 0)) {
-      return { label: "On Time", variant: "default" };
+    if (!row.checkIn) return { label: "Tidak Hadir", variant: "destructive" };
+    const { hour } = getWIBTime(row.checkIn.timestamp);
+    // Late if check-in after 07:00 WIB
+    if (hour < 7 || (hour === 7 && new Date(row.checkIn.timestamp).getMinutes() === 0)) {
+      return { label: "Tepat Waktu", variant: "default" };
     }
-    return { label: "Late", variant: "destructive" };
+    return { label: "Terlambat", variant: "destructive" };
   }
 
   return (
