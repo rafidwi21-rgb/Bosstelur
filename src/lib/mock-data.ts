@@ -130,7 +130,7 @@ export const defaultUsers: User[] = [
   },
   {
     id: "worker-1",
-    name: "Budi Santoso",
+    name: "Arby",
     email: "budi@farm.com",
     password: "worker123",
     role: "WORKER",
@@ -176,11 +176,11 @@ export const defaultHouses: PoultryHouse[] = [
 const today = new Date().toISOString().split("T")[0];
 
 export const defaultTasks: TaskAssignment[] = [
-  // Worker 1 - Budi (House A)
-  { id: "ta-1", taskTitle: "Beri Pakan Ayam (Pagi)", taskType: "FEEDING", timeSlot: "MORNING", houseName: "House A", houseId: "house-a", workerId: "worker-1", workerName: "Budi Santoso", assignedDate: today, status: "PENDING" },
-  { id: "ta-2", taskTitle: "Kumpulkan Telur (Pagi)", taskType: "EGG_COLLECTION", timeSlot: "MORNING", houseName: "House A", houseId: "house-a", workerId: "worker-1", workerName: "Budi Santoso", assignedDate: today, status: "PENDING" },
-  { id: "ta-3", taskTitle: "Beri Pakan Ayam (Sore)", taskType: "FEEDING", timeSlot: "EVENING", houseName: "House A", houseId: "house-a", workerId: "worker-1", workerName: "Budi Santoso", assignedDate: today, status: "PENDING" },
-  { id: "ta-4", taskTitle: "Kumpulkan Telur (Sore)", taskType: "EGG_COLLECTION", timeSlot: "EVENING", houseName: "House A", houseId: "house-a", workerId: "worker-1", workerName: "Budi Santoso", assignedDate: today, status: "PENDING" },
+  // Worker 1 - Arby (House A)
+  { id: "ta-1", taskTitle: "Beri Pakan Ayam (Pagi)", taskType: "FEEDING", timeSlot: "MORNING", houseName: "House A", houseId: "house-a", workerId: "worker-1", workerName: "Arby", assignedDate: today, status: "PENDING" },
+  { id: "ta-2", taskTitle: "Kumpulkan Telur (Pagi)", taskType: "EGG_COLLECTION", timeSlot: "MORNING", houseName: "House A", houseId: "house-a", workerId: "worker-1", workerName: "Arby", assignedDate: today, status: "PENDING" },
+  { id: "ta-3", taskTitle: "Beri Pakan Ayam (Sore)", taskType: "FEEDING", timeSlot: "EVENING", houseName: "House A", houseId: "house-a", workerId: "worker-1", workerName: "Arby", assignedDate: today, status: "PENDING" },
+  { id: "ta-4", taskTitle: "Kumpulkan Telur (Sore)", taskType: "EGG_COLLECTION", timeSlot: "EVENING", houseName: "House A", houseId: "house-a", workerId: "worker-1", workerName: "Arby", assignedDate: today, status: "PENDING" },
   // Worker 2 - Siti (House B)
   { id: "ta-5", taskTitle: "Beri Pakan Ayam (Pagi)", taskType: "FEEDING", timeSlot: "MORNING", houseName: "House B", houseId: "house-b", workerId: "worker-2", workerName: "Siti Nurhaliza", assignedDate: today, status: "PENDING" },
   { id: "ta-6", taskTitle: "Kumpulkan Telur (Pagi)", taskType: "EGG_COLLECTION", timeSlot: "MORNING", houseName: "House B", houseId: "house-b", workerId: "worker-2", workerName: "Siti Nurhaliza", assignedDate: today, status: "PENDING" },
@@ -221,7 +221,7 @@ export const defaultProduction: EggProduction[] = last30Days.flatMap((date, i) =
   // ~16 eggs per kg estimate
   const toUnit = (kg: number) => Math.round(kg * 16);
   return [
-    { id: `ep-a-${i}`, houseId: "house-a", houseName: "House A", collectedBy: "worker-1", collectorName: "Budi Santoso", date, totalKg: aKg, totalUnit: toUnit(aKg), brokenKg: aBr, brokenUnit: toUnit(aBr), goodKg: aKg - aBr, goodUnit: toUnit(aKg - aBr) },
+    { id: `ep-a-${i}`, houseId: "house-a", houseName: "House A", collectedBy: "worker-1", collectorName: "Arby", date, totalKg: aKg, totalUnit: toUnit(aKg), brokenKg: aBr, brokenUnit: toUnit(aBr), goodKg: aKg - aBr, goodUnit: toUnit(aKg - aBr) },
     { id: `ep-b-${i}`, houseId: "house-b", houseName: "House B", collectedBy: "worker-2", collectorName: "Siti Nurhaliza", date, totalKg: bKg, totalUnit: toUnit(bKg), brokenKg: bBr, brokenUnit: toUnit(bBr), goodKg: bKg - bBr, goodUnit: toUnit(bKg - bBr) },
     { id: `ep-c-${i}`, houseId: "house-c", houseName: "House C", collectedBy: "worker-3", collectorName: "Dedi Kurniawan", date, totalKg: cKg, totalUnit: toUnit(cKg), brokenKg: cBr, brokenUnit: toUnit(cBr), goodKg: cKg - cBr, goodUnit: toUnit(cKg - cBr) },
   ];
@@ -234,7 +234,7 @@ export const defaultFeedInventory: FeedInventory[] = [
 ];
 
 export const defaultFeedUsage: FeedUsage[] = last30Days.flatMap((date, i) => [
-  { id: `fu-a-${i}`, feedId: "feed-1", feedType: "Layer Mash", houseId: "house-a", houseName: "House A", usedBy: "worker-1", workerName: "Budi Santoso", date, quantity: 45 + Math.floor(seeded(i * 100 + 1) * 10) },
+  { id: `fu-a-${i}`, feedId: "feed-1", feedType: "Layer Mash", houseId: "house-a", houseName: "House A", usedBy: "worker-1", workerName: "Arby", date, quantity: 45 + Math.floor(seeded(i * 100 + 1) * 10) },
   { id: `fu-b-${i}`, feedId: "feed-1", feedType: "Layer Mash", houseId: "house-b", houseName: "House B", usedBy: "worker-2", workerName: "Siti Nurhaliza", date, quantity: 40 + Math.floor(seeded(i * 100 + 2) * 10) },
   { id: `fu-c-${i}`, feedId: "feed-1", feedType: "Layer Mash", houseId: "house-c", houseName: "House C", usedBy: "worker-3", workerName: "Dedi Kurniawan", date, quantity: 25 + Math.floor(seeded(i * 100 + 3) * 8) },
 ]);

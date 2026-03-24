@@ -27,7 +27,7 @@ async function main() {
   });
 
   const budi = await prisma.user.create({
-    data: { name: "Budi Santoso", email: "budi@farm.com", password: hashedWorker, role: "WORKER", phone: "081234567891", address: "Jl. Worker No. 1", salary: 3000000, startDate: new Date("2024-03-15"), isActive: true },
+    data: { name: "Arby", email: "budi@farm.com", password: hashedWorker, role: "WORKER", phone: "081234567891", address: "Jl. Worker No. 1", salary: 3000000, startDate: new Date("2024-03-15"), isActive: true },
   });
 
   const siti = await prisma.user.create({
