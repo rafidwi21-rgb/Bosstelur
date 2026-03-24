@@ -131,7 +131,7 @@ export const defaultUsers: User[] = [
   {
     id: "worker-1",
     name: "Arby",
-    email: "budi@farm.com",
+    email: "arby@farm.com",
     password: "worker123",
     role: "WORKER",
     phone: "081234567891",

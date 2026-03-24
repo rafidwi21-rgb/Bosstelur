@@ -26,7 +26,7 @@ export default function LoginPage() {
   };
 
   const quickLogin = async (role: "admin" | "worker") => {
-    const em = role === "admin" ? "admin@farm.com" : "budi@farm.com";
+    const em = role === "admin" ? "admin@farm.com" : "arby@farm.com";
     const pw = role === "admin" ? "admin123" : "worker123";
     setEmail(em); setPassword(pw); setLoading(true);
     const user = await store.login(em, pw);
@@ -117,7 +117,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-[#ccc]">Farm Worker</p>
-                <p className="text-xs text-[#4a4a4a] font-mono">budi@farm.com</p>
+                <p className="text-xs text-[#4a4a4a] font-mono">arby@farm.com</p>
               </div>
             </button>
           </div>
