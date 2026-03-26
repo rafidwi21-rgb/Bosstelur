@@ -30,9 +30,10 @@ interface AttendanceRow {
 }
 
 function formatTime(timestamp: string) {
-  return new Date(timestamp).toLocaleTimeString("en-US", {
+  return new Date(timestamp).toLocaleTimeString("id-ID", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Asia/Jakarta",
   });
 }
 
@@ -85,9 +86,10 @@ export default function AttendancePage() {
       .map((r) => new Date(r.checkIn!.timestamp).getTime());
     if (checkIns.length === 0) return "-";
     const avg = checkIns.reduce((sum, t) => sum + t, 0) / checkIns.length;
-    return new Date(avg).toLocaleTimeString("en-US", {
+    return new Date(avg).toLocaleTimeString("id-ID", {
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "Asia/Jakarta",
     });
   }, [attendanceRows]);
 

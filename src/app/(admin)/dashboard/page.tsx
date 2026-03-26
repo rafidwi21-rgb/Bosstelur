@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { api } from "@/lib/api";
-import { Egg, Users, Wheat, DollarSign, TrendingUp, TrendingDown, Home, ArrowUpRight, ArrowDownRight, Activity } from "lucide-react";
+import { Egg, Users, Wheat, DollarSign, TrendingUp, TrendingDown, Home, ArrowUpRight, ArrowDownRight, Activity, AlertTriangle } from "lucide-react";
 import dynamic from "next/dynamic";
 
 const EggChart = dynamic(
@@ -86,10 +86,10 @@ export default function DashboardPage() {
 
   if (!data) return <div className="flex items-center justify-center h-64"><div className="size-6 animate-spin rounded-full border-2 border-[#1e1e1e] border-t-[#3ecf8e]" /></div>;
 
-  const { totalChickens = 0, totalCapacity = 0, eggsTodayKg = 0, eggsTodayUnit = 0, eggsYesterdayKg = 0, workersPresent = 0, totalWorkers = 0, feedStock = 0, feedUsedToday = 0, todaysRevenue = 0, monthlyRevenue = 0, monthlyExpenses = 0, activeHouses = [], recentCheckIns = [], eggChartData = [], feedChartData = [] } = data;
+  const { totalChickens = 0, totalCapacity = 0, eggsTodayKg = 0, eggsTodayUnit = 0, eggsYesterdayKg = 0, workersPresent = 0, totalWorkers = 0, feedStock = 0, feedUsedToday = 0, avgDailyUsage = 0, feedStockDaysLeft = 0, lowStockFeeds = [], todaysRevenue = 0, monthlyRevenue = 0, monthlyExpenses = 0, expenseByCategory = {}, netProfit = 0, activeHouses = [], recentCheckIns = [], eggChartData = [], feedChartData = [] } = data;
 
   const eggChange = eggsYesterdayKg > 0 ? Math.round(((eggsTodayKg - eggsYesterdayKg) / eggsYesterdayKg) * 100) : 0;
-  const profit = monthlyRevenue - monthlyExpenses;
+  const profit = netProfit;
 
   // Map API chart data to chart component format
   const mappedEggChart = eggChartData.map((d: any) => ({ date: formatShortDate(d.date), kg: d.totalKg, pcs: d.totalUnit }));
@@ -106,6 +106,19 @@ export default function DashboardPage() {
         </div>
         <p className="text-xs text-neutral-600 font-mono">{new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
       </div>
+
+      {/* Low Stock Alert */}
+      {lowStockFeeds.length > 0 && (
+        <div className="rounded-xl border border-red-500/20 bg-red-950/30 px-4 py-3 flex items-center gap-3">
+          <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-red-300 font-medium">Stok Pakan Menipis!</p>
+            <p className="text-xs text-red-400/70 truncate">
+              {lowStockFeeds.map((f: any) => `${f.feedType}: ${f.quantity} ${f.unit}`).join(" · ")}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Top Row — Hero Stats: asymmetric 3-col */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
@@ -136,8 +149,22 @@ export default function DashboardPage() {
           <p className="text-[11px] text-neutral-600 mt-2">Kemarin: {eggsYesterdayKg} kg</p>
         </div>
 
-        {/* Revenue + Expenses — stacked */}
+        {/* Revenue + Expenses + Net Profit — stacked */}
         <div className="md:col-span-4 flex flex-col gap-3">
+          {/* Net Profit - prominent */}
+          <div className={`rounded-2xl border ${profit >= 0 ? "border-[#3ecf8e]/30 bg-[#3ecf8e]/[0.04]" : "border-red-500/30 bg-red-950/20"} p-4`}>
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp className={`h-3.5 w-3.5 ${profit >= 0 ? "text-[#3ecf8e]" : "text-red-400"}`} />
+              <span className="text-[10px] text-neutral-500 uppercase tracking-widest">Net Profit Bulan Ini</span>
+            </div>
+            <p className={`text-2xl font-bold ${profit >= 0 ? "text-[#3ecf8e]" : "text-red-400"}`}>
+              {profit >= 0 ? "+" : "-"}{formatCurrency(Math.abs(profit))}
+            </p>
+            <div className="flex items-center justify-between mt-1.5 text-[10px] text-neutral-600">
+              <span>Pendapatan: {formatCurrency(monthlyRevenue)}</span>
+              <span>Pengeluaran: {formatCurrency(monthlyExpenses)}</span>
+            </div>
+          </div>
           <div className="flex-1 rounded-2xl border border-neutral-800/60 bg-neutral-900/50 p-4">
             <div className="flex items-center gap-2 mb-2">
               <DollarSign className="h-3.5 w-3.5 text-[#3ecf8e]" />
@@ -152,9 +179,16 @@ export default function DashboardPage() {
               <span className="text-[10px] text-neutral-500 uppercase tracking-widest">Pengeluaran Bulan Ini</span>
             </div>
             <p className="text-xl font-bold text-white">{formatCurrency(monthlyExpenses)}</p>
-            <p className={`text-[11px] mt-1 ${profit >= 0 ? "text-green-500" : "text-red-500"}`}>
-              {profit >= 0 ? "Profit" : "Rugi"}: {formatCurrency(Math.abs(profit))}
-            </p>
+            {Object.keys(expenseByCategory).length > 0 && (
+              <div className="mt-1.5 space-y-0.5">
+                {Object.entries(expenseByCategory).sort(([,a]: any, [,b]: any) => b - a).slice(0, 3).map(([cat, amt]: any) => (
+                  <div key={cat} className="flex items-center justify-between text-[10px]">
+                    <span className="text-neutral-600">{cat}</span>
+                    <span className="text-neutral-500 tabular-nums">{formatCurrency(amt)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -176,13 +210,18 @@ export default function DashboardPage() {
               ))}
             </div>
           </div>
-          <div className="flex-1 rounded-2xl border border-neutral-800/60 bg-neutral-900/50 p-4">
+          <div className={`flex-1 rounded-2xl border ${lowStockFeeds.length > 0 ? "border-red-500/30 bg-red-950/20" : "border-neutral-800/60 bg-neutral-900/50"} p-4`}>
             <div className="flex items-center gap-2 mb-3">
-              <Wheat className="h-3.5 w-3.5 text-[#3ecf8e]" />
+              {lowStockFeeds.length > 0 ? <AlertTriangle className="h-3.5 w-3.5 text-red-400" /> : <Wheat className="h-3.5 w-3.5 text-[#3ecf8e]" />}
               <span className="text-[10px] text-neutral-500 uppercase tracking-widest">Stok Pakan</span>
             </div>
             <p className="text-2xl font-bold text-white">{feedStock} <span className="text-sm text-neutral-600 font-normal">kg</span></p>
             <p className="text-[11px] text-neutral-600 mt-1">Terpakai hari ini: {feedUsedToday} kg</p>
+            {avgDailyUsage > 0 && (
+              <p className={`text-[11px] mt-0.5 ${feedStockDaysLeft <= 7 ? "text-red-400 font-medium" : "text-neutral-600"}`}>
+                Estimasi: {feedStockDaysLeft} hari lagi
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -255,7 +294,7 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-2">
               {mappedCheckIns.map((a: any) => {
-                const time = new Date(a.timestamp).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+                const time = new Date(a.timestamp).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
                 const initials = (a.userName || "?").split(" ").map((n: string) => n[0]).join("").slice(0, 2);
                 return (
                   <div key={a.id} className="flex items-center gap-3 rounded-lg py-2 px-1">

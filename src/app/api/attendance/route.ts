@@ -10,8 +10,9 @@ export async function GET(request: NextRequest) {
     const where: Record<string, unknown> = {};
 
     if (date) {
-      const startOfDay = new Date(`${date}T00:00:00.000Z`);
-      const endOfDay = new Date(`${date}T23:59:59.999Z`);
+      // WIB is UTC+7, so WIB midnight = UTC 17:00 previous day
+      const startOfDay = new Date(`${date}T00:00:00+07:00`);
+      const endOfDay = new Date(`${date}T23:59:59.999+07:00`);
       where.timestamp = {
         gte: startOfDay,
         lte: endOfDay,
@@ -90,8 +91,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const startOfDay = new Date(`${date}T00:00:00.000Z`);
-    const endOfDay = new Date(`${date}T23:59:59.999Z`);
+    const startOfDay = new Date(`${date}T00:00:00+07:00`);
+    const endOfDay = new Date(`${date}T23:59:59.999+07:00`);
 
     const record = await prisma.attendance.findFirst({
       where: {

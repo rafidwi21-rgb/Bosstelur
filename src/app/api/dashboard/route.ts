@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
     const todayDate = new Date(today);
 
     const yesterday = new Date(todayDate);
@@ -48,8 +48,8 @@ export async function GET() {
     );
 
     // Workers present today (checked in)
-    const todayStart = new Date(`${today}T00:00:00.000Z`);
-    const todayEnd = new Date(`${today}T23:59:59.999Z`);
+    const todayStart = new Date(`${today}T00:00:00+07:00`);
+    const todayEnd = new Date(`${today}T23:59:59.999+07:00`);
 
     const checkInsToday = await prisma.attendance.findMany({
       where: {
@@ -104,7 +104,7 @@ export async function GET() {
       0
     );
 
-    // Monthly expenses = operational expenses + feed usage cost
+    // Monthly expenses (all in OperationalExpense — feed purchases auto-included)
     const monthlyExpenseRecords = await prisma.operationalExpense.findMany({
       where: {
         date: {
@@ -113,31 +113,35 @@ export async function GET() {
         },
       },
     });
-    const monthlyOperationalExpenses = monthlyExpenseRecords.reduce(
+    const monthlyExpenses = monthlyExpenseRecords.reduce(
       (sum, e) => sum + e.amount,
       0
     );
 
-    // Feed usage cost for the month
-    const monthlyFeedUsages = await prisma.feedUsage.findMany({
-      where: {
-        date: {
-          gte: monthStart,
-          lte: monthEnd,
-        },
-      },
-      include: {
-        feed: {
-          select: { costPerUnit: true },
-        },
-      },
-    });
-    const monthlyFeedCost = monthlyFeedUsages.reduce(
-      (sum, u) => sum + u.quantity * (u.feed?.costPerUnit || 0),
-      0
-    );
+    // Expense breakdown by category
+    const expenseByCategory: Record<string, number> = {};
+    for (const e of monthlyExpenseRecords) {
+      expenseByCategory[e.category] = (expenseByCategory[e.category] || 0) + e.amount;
+    }
 
-    const monthlyExpenses = monthlyOperationalExpenses + monthlyFeedCost;
+    // Net profit
+    const netProfit = monthlyRevenue - monthlyExpenses;
+
+    // Feed stock estimation: days left based on avg daily usage (last 14 days)
+    const last14Days = new Date(todayDate);
+    last14Days.setDate(last14Days.getDate() - 13);
+    const recentFeedUsages = await prisma.feedUsage.findMany({
+      where: { date: { gte: last14Days, lte: todayDate } },
+    });
+    const totalRecentUsage = recentFeedUsages.reduce((s, f) => s + f.quantity, 0);
+    const daysWithUsage = new Set(recentFeedUsages.map(f => f.date.toISOString().split("T")[0])).size;
+    const avgDailyUsage = daysWithUsage > 0 ? totalRecentUsage / daysWithUsage : 0;
+    const feedStockDaysLeft = avgDailyUsage > 0 ? Math.floor(feedStock / avgDailyUsage) : feedStock > 0 ? 999 : 0;
+
+    // Low stock feeds (< 100kg remaining)
+    const lowStockFeeds = feedInventory
+      .filter(f => f.quantity < 100)
+      .map(f => ({ id: f.id, feedType: f.feedType, quantity: f.quantity, unit: f.unit }));
 
     // Active houses with today's production
     const activeHouses = await prisma.poultryHouse.findMany({
@@ -230,9 +234,14 @@ export async function GET() {
       totalWorkers,
       feedStock,
       feedUsedToday: feedUsedTodayTotal,
+      avgDailyUsage: Math.round(avgDailyUsage),
+      feedStockDaysLeft,
+      lowStockFeeds,
       todaysRevenue,
       monthlyRevenue,
       monthlyExpenses,
+      expenseByCategory,
+      netProfit,
       activeHouses,
       recentCheckIns,
       eggChartData,

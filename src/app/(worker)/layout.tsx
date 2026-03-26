@@ -6,6 +6,7 @@ import { store } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { ChickenBossIcon } from "@/components/logo/chicken-boss";
+import { WibClock } from "@/components/ui/wib-clock";
 
 export default function WorkerLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -45,6 +46,7 @@ export default function WorkerLayout({ children }: { children: React.ReactNode }
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <WibClock />
             <span className="text-[13px] text-[#6b6b6b]">{userName}</span>
             <Button variant="ghost" size="icon" onClick={() => { store.logout(); router.replace("/login"); }} className="h-8 w-8 text-[#6b6b6b] hover:text-white hover:bg-[#161616]">
               <LogOut className="size-4" />

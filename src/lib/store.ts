@@ -47,5 +47,5 @@ export const store = {
   },
 
   // Helper
-  todayStr: () => new Date().toISOString().split("T")[0],
+  todayStr: () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" }),
 };

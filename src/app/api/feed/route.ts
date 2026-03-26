@@ -17,16 +17,35 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const quantity = body.quantity;
+    const costPerUnit = body.costPerUnit;
+    const totalCost = quantity * costPerUnit;
+    const purchaseDate = new Date(body.purchaseDate);
+
     const feed = await prisma.feedInventory.create({
       data: {
         feedType: body.feedType,
-        quantity: body.quantity,
+        quantity,
         unit: body.unit || "kg",
-        costPerUnit: body.costPerUnit,
+        costPerUnit,
         supplier: body.supplier || null,
-        purchaseDate: new Date(body.purchaseDate),
+        purchaseDate,
       },
     });
+
+    // Auto-create operational expense for feed purchase
+    if (totalCost > 0) {
+      await prisma.operationalExpense.create({
+        data: {
+          category: "Pakan",
+          description: `Pembelian ${body.feedType} - ${quantity} ${body.unit || "kg"} [ref:${feed.id}]`,
+          amount: totalCost,
+          date: purchaseDate,
+          vendor: body.supplier || null,
+        },
+      });
+    }
+
     return NextResponse.json(feed, { status: 201 });
   } catch (error) {
     console.error("Create feed error:", error);

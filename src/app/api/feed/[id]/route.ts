@@ -32,6 +32,10 @@ export async function DELETE(
     const { id } = await params;
     await prisma.feedUsage.deleteMany({ where: { feedId: id } });
     await prisma.feedInventory.delete({ where: { id } });
+    // Delete linked operational expense
+    await prisma.operationalExpense.deleteMany({
+      where: { description: { contains: `[ref:${id}]` } },
+    });
     return NextResponse.json({ message: "Feed deleted" });
   } catch (error) {
     console.error("Delete feed error:", error);

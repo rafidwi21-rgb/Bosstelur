@@ -35,10 +35,11 @@ import {
   DollarSign,
   Users,
   Receipt,
+  TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 
-type ReportType = "Production" | "Feed" | "Sales" | "Attendance" | "Expenses";
+type ReportType = "Production" | "Feed" | "Sales" | "Attendance" | "Expenses" | "Profit";
 
 function formatCurrency(amount: number) {
   return `Rp ${amount.toLocaleString("id-ID")}`;
@@ -249,19 +250,47 @@ export default function ReportsPage() {
         ).size;
         return [
           {
-            label: "Total Expenses",
+            label: "Total Pengeluaran",
             value: formatCurrency(totalAmount),
             icon: DollarSign,
           },
           {
-            label: "Categories",
+            label: "Kategori",
             value: categories.toString(),
             icon: FileText,
           },
           {
-            label: "Records",
+            label: "Catatan",
             value: filteredExpenses.length.toString(),
             icon: Receipt,
+          },
+        ];
+      }
+      case "Profit": {
+        const totalRevenue = filteredSales.reduce(
+          (s: number, sale: any) => s + sale.totalAmount,
+          0
+        );
+        const totalExpense = filteredExpenses.reduce(
+          (s: number, e: any) => s + e.amount,
+          0
+        );
+        const net = totalRevenue - totalExpense;
+        return [
+          {
+            label: "Total Pendapatan",
+            value: formatCurrency(totalRevenue),
+            icon: DollarSign,
+          },
+          {
+            label: "Total Pengeluaran",
+            value: formatCurrency(totalExpense),
+            icon: Receipt,
+          },
+          {
+            label: net >= 0 ? "Net Profit" : "Net Rugi",
+            value: `${net >= 0 ? "+" : "-"}${formatCurrency(Math.abs(net))}`,
+            icon: TrendingUp,
           },
         ];
       }
@@ -317,6 +346,7 @@ export default function ReportsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="Profit">Profit / Loss</SelectItem>
                   <SelectItem value="Production">Production</SelectItem>
                   <SelectItem value="Feed">Feed</SelectItem>
                   <SelectItem value="Sales">Sales</SelectItem>
@@ -394,6 +424,49 @@ export default function ReportsPage() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
+            {reportType === "Profit" && (() => {
+              const totalRevenue = filteredSales.reduce((s: number, sale: any) => s + sale.totalAmount, 0);
+              const totalExpense = filteredExpenses.reduce((s: number, e: any) => s + e.amount, 0);
+              const net = totalRevenue - totalExpense;
+              // Group expenses by category
+              const byCategory: Record<string, number> = {};
+              for (const e of filteredExpenses) { byCategory[e.category] = (byCategory[e.category] || 0) + e.amount; }
+              const sortedCategories = Object.entries(byCategory).sort(([,a], [,b]) => (b as number) - (a as number));
+              return (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Keterangan</TableHead>
+                      <TableHead className="text-right">Jumlah</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow className="bg-green-500/5">
+                      <TableCell className="font-semibold text-green-400">Pendapatan (Penjualan Telur)</TableCell>
+                      <TableCell className="text-right font-semibold text-green-400">{formatCurrency(totalRevenue)}</TableCell>
+                    </TableRow>
+                    <TableRow><TableCell colSpan={2} className="text-xs text-muted-foreground font-semibold uppercase tracking-wider pt-4">Pengeluaran</TableCell></TableRow>
+                    {sortedCategories.map(([cat, amt]) => (
+                      <TableRow key={cat}>
+                        <TableCell className="pl-6">{cat}</TableCell>
+                        <TableCell className="text-right text-red-400">-{formatCurrency(amt as number)}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="border-t-2 border-neutral-700">
+                      <TableCell className="font-semibold">Total Pengeluaran</TableCell>
+                      <TableCell className="text-right font-semibold text-red-400">-{formatCurrency(totalExpense)}</TableCell>
+                    </TableRow>
+                    <TableRow className={`${net >= 0 ? "bg-green-500/10" : "bg-red-500/10"}`}>
+                      <TableCell className="font-bold text-lg">{net >= 0 ? "NET PROFIT" : "NET RUGI"}</TableCell>
+                      <TableCell className={`text-right font-bold text-lg ${net >= 0 ? "text-green-400" : "text-red-400"}`}>
+                        {net >= 0 ? "+" : "-"}{formatCurrency(Math.abs(net))}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              );
+            })()}
+
             {reportType === "Production" && (
               <Table>
                 <TableHeader>
@@ -526,11 +599,12 @@ export default function ReportsPage() {
                         {a.type === "CHECK_IN" ? "Check In" : "Check Out"}
                       </TableCell>
                       <TableCell>
-                        {new Date(a.timestamp).toLocaleString("en-US", {
+                        {new Date(a.timestamp).toLocaleString("id-ID", {
                           month: "short",
                           day: "numeric",
                           hour: "2-digit",
                           minute: "2-digit",
+                          timeZone: "Asia/Jakarta",
                         })}
                       </TableCell>
                     </TableRow>

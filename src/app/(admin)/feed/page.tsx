@@ -42,6 +42,16 @@ export default function FeedPage() {
   const lowStockItems = useMemo(() => inventory.filter(f => f.quantity < 100), [inventory]);
   const sortedUsage = useMemo(() => [...feedUsage].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()), [feedUsage]);
 
+  // Estimasi hari stok habis berdasarkan rata-rata pemakaian harian
+  const avgDailyUsage = useMemo(() => {
+    const uniqueDays = new Set(feedUsage.map((u: any) => u.date)).size;
+    if (uniqueDays === 0) return 0;
+    const total = feedUsage.reduce((s: number, u: any) => s + u.quantity, 0);
+    return total / uniqueDays;
+  }, [feedUsage]);
+  const daysLeft = avgDailyUsage > 0 ? Math.floor(totalStock / avgDailyUsage) : totalStock > 0 ? 999 : 0;
+  const totalValue = useMemo(() => inventory.reduce((s, f) => s + f.quantity * f.costPerUnit, 0), [inventory]);
+
   function openAdd() { setEditingId(null); setForm(emptyForm); setDialogOpen(true); }
 
   function openEdit(feed: any) {
@@ -85,18 +95,48 @@ export default function FeedPage() {
         <p className="text-sm text-muted-foreground">Manage feed inventory and track usage</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {/* Low Stock Alert Banner */}
+      {lowStockItems.length > 0 && (
+        <div className="rounded-xl border border-red-500/20 bg-red-950/30 px-4 py-3 flex items-start gap-3">
+          <AlertTriangle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm text-red-300 font-medium">Stok Pakan Menipis — Segera Beli!</p>
+            <p className="text-xs text-red-400/70 mt-0.5">
+              {lowStockItems.map(f => `${f.feedType}: ${f.quantity} ${f.unit}`).join(" · ")}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <Card><CardContent className="flex items-center gap-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-400"><Package className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold">{totalStock.toLocaleString()} kg</p><p className="text-xs text-muted-foreground">Total Stock</p></div>
+          <div>
+            <p className="text-2xl font-bold">{totalStock.toLocaleString()} kg</p>
+            <p className="text-xs text-muted-foreground">Total Stok</p>
+            <p className="text-[11px] text-muted-foreground">Nilai: Rp {totalValue.toLocaleString("id-ID")}</p>
+          </div>
         </CardContent></Card>
         <Card><CardContent className="flex items-center gap-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-400"><TrendingUp className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold">{monthlyUsage.toLocaleString()} kg</p><p className="text-xs text-muted-foreground">Monthly Usage</p></div>
+          <div>
+            <p className="text-2xl font-bold">{monthlyUsage.toLocaleString()} kg</p>
+            <p className="text-xs text-muted-foreground">Pemakaian Bulan Ini</p>
+            <p className="text-[11px] text-muted-foreground">Rata-rata: {Math.round(avgDailyUsage)} kg/hari</p>
+          </div>
+        </CardContent></Card>
+        <Card><CardContent className="flex items-center gap-4">
+          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${daysLeft <= 7 ? "bg-red-500/10 text-red-400" : "bg-amber-500/10 text-amber-400"}`}>
+            <Package className="h-5 w-5" />
+          </div>
+          <div>
+            <p className={`text-2xl font-bold ${daysLeft <= 7 ? "text-red-400" : ""}`}>{daysLeft > 999 ? "∞" : daysLeft} hari</p>
+            <p className="text-xs text-muted-foreground">Estimasi Stok Habis</p>
+          </div>
         </CardContent></Card>
         <Card><CardContent className="flex items-center gap-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-500/10 text-red-400"><AlertTriangle className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold">{lowStockItems.length}</p><p className="text-xs text-muted-foreground">Low Stock Alert (&lt;100kg)</p></div>
+          <div><p className="text-2xl font-bold">{lowStockItems.length}</p><p className="text-xs text-muted-foreground">Low Stock (&lt;100kg)</p></div>
         </CardContent></Card>
       </div>
 

@@ -6,6 +6,7 @@ import { store } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { WibClock } from "@/components/ui/wib-clock";
 
 interface AdminHeaderProps { onMenuClick: () => void; }
 
@@ -22,6 +23,9 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
         </Button>
         <span className="text-[13px] text-[#4a4a4a]">Farm Management</span>
       </div>
+
+      <div className="flex items-center gap-4">
+      <WibClock />
 
       <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-[#161616] transition-colors">
@@ -44,6 +48,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      </div>
     </header>
   );
 }

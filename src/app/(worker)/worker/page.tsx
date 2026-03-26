@@ -17,7 +17,7 @@ const TASK_COLORS: Record<string, string> = {
   WATER_CHECK: "text-cyan-400 bg-cyan-400/10 border-cyan-500/10",
 };
 
-function formatTime(ts: string) { return new Date(ts).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }); }
+function formatTime(ts: string) { return new Date(ts).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }); }
 function toBahasa(t: string) {
   return t.replace("Feed Chickens (Morning)", "Beri Pakan Ayam (Pagi)").replace("Feed Chickens (Evening)", "Beri Pakan Ayam (Sore)")
     .replace("Collect Eggs (Morning)", "Kumpulkan Telur (Pagi)").replace("Collect Eggs (Evening)", "Kumpulkan Telur (Sore)")
