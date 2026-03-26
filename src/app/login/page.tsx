@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { LogIn, Shield, Wrench, X } from "lucide-react";
+import { LogIn, Shield, Wrench, Delete, X } from "lucide-react";
 import { ChickenBossIcon } from "@/components/logo/chicken-boss";
 import { toast } from "sonner";
 import { store } from "@/lib/store";
@@ -10,62 +10,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const PASSCODE = "88888888";
+const PASSCODE = "8888";
 
 function PasscodeModal({ role, onClose }: { role: "admin" | "worker"; onClose: () => void }) {
   const router = useRouter();
-  const [digits, setDigits] = useState<string[]>(Array(8).fill(""));
+  const [code, setCode] = useState("");
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  useEffect(() => { inputRefs.current[0]?.focus(); }, []);
+  const color = role === "admin" ? "#3ecf8e" : "#b4783c";
+  const label = role === "admin" ? "Owner" : "Farm Worker";
 
-  const handleChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
-    const char = value.slice(-1);
-    const newDigits = [...digits];
-    newDigits[index] = char;
-    setDigits(newDigits);
-    setError(false);
-
-    if (char && index < 7) {
-      inputRefs.current[index + 1]?.focus();
-    }
-
-    // Auto-submit when all 8 digits filled
-    if (char && index === 7) {
-      const code = newDigits.join("");
-      if (code.length === 8) tryLogin(code);
-    }
-  };
-
-  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !digits[index] && index > 0) {
-      const newDigits = [...digits];
-      newDigits[index - 1] = "";
-      setDigits(newDigits);
-      inputRefs.current[index - 1]?.focus();
-    }
-    if (e.key === "Escape") onClose();
-  };
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 8);
-    if (!pasted) return;
-    const newDigits = Array(8).fill("");
-    for (let i = 0; i < pasted.length; i++) newDigits[i] = pasted[i];
-    setDigits(newDigits);
-    if (pasted.length === 8) tryLogin(pasted);
-    else inputRefs.current[pasted.length]?.focus();
-  };
-
-  const tryLogin = async (code: string) => {
-    if (code !== PASSCODE) {
+  const tryLogin = useCallback(async (passcode: string) => {
+    if (passcode !== PASSCODE) {
       setError(true);
-      setDigits(Array(8).fill(""));
-      setTimeout(() => inputRefs.current[0]?.focus(), 100);
+      setCode("");
+      setTimeout(() => setError(false), 600);
       return;
     }
     setLoading(true);
@@ -79,62 +39,94 @@ function PasscodeModal({ role, onClose }: { role: "admin" | "worker"; onClose: (
       toast.error("Login gagal");
       setLoading(false);
     }
+  }, [role, router]);
+
+  const pressKey = (key: string) => {
+    if (loading) return;
+    setError(false);
+    if (key === "del") {
+      setCode(prev => prev.slice(0, -1));
+      return;
+    }
+    const next = code + key;
+    if (next.length > 4) return;
+    setCode(next);
+    if (next.length === 4) tryLogin(next);
   };
 
-  const label = role === "admin" ? "Admin / Pemilik" : "Pekerja";
-  const color = role === "admin" ? "#3ecf8e" : "#b4783c";
+  const keys = [
+    ["1", "2", "3"],
+    ["4", "5", "6"],
+    ["7", "8", "9"],
+    ["", "0", "del"],
+  ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" onClick={onClose}>
-      <div className="relative w-full max-w-sm rounded-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-        {/* Gradient border */}
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[var(--accent)]/30 via-[#1e1e1e] to-[var(--accent)]/10 p-px" style={{ "--accent": color } as any}>
-          <div className="h-full w-full rounded-2xl bg-[#0e0e0e]" />
-        </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md" onClick={onClose}>
+      <div className="relative w-full max-w-xs" onClick={e => e.stopPropagation()}>
+        {/* Close button */}
+        <button onClick={onClose} className="absolute -top-10 right-0 text-[#6b6b6b] hover:text-white transition">
+          <X className="h-5 w-5" />
+        </button>
 
-        <div className="relative z-10 p-6 space-y-5">
-          {/* Close */}
-          <button onClick={onClose} className="absolute top-4 right-4 text-[#4a4a4a] hover:text-white transition">
-            <X className="h-4 w-4" />
-          </button>
-
-          {/* Header */}
-          <div className="text-center space-y-2">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl" style={{ background: `${color}15`, border: `1px solid ${color}20` }}>
-              {role === "admin" ? <Shield className="h-5 w-5" style={{ color }} /> : <Wrench className="h-5 w-5" style={{ color }} />}
+        <div className="text-center space-y-6">
+          {/* Icon + label */}
+          <div className="space-y-2">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full" style={{ background: `${color}15`, border: `1px solid ${color}30` }}>
+              {role === "admin" ? <Shield className="h-6 w-6" style={{ color }} /> : <Wrench className="h-6 w-6" style={{ color }} />}
             </div>
-            <p className="text-sm font-medium text-[#ccc]">{label}</p>
-            <p className="text-xs text-[#4a4a4a]">Masukkan passcode 8 digit</p>
+            <p className="text-sm font-medium text-white">{label}</p>
+            <p className="text-xs text-[#6b6b6b]">Masukkan Passcode</p>
           </div>
 
-          {/* Passcode inputs */}
-          <div className="flex justify-center gap-2" onPaste={handlePaste}>
-            {digits.map((digit, i) => (
-              <input
+          {/* Dots indicator */}
+          <div className="flex justify-center gap-3">
+            {[0, 1, 2, 3].map(i => (
+              <div
                 key={i}
-                ref={el => { inputRefs.current[i] = el; }}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={e => handleChange(i, e.target.value)}
-                onKeyDown={e => handleKeyDown(i, e)}
-                disabled={loading}
-                className={`w-9 h-12 text-center text-lg font-bold rounded-lg border bg-[#0a0a0a] text-white outline-none transition-all
-                  ${error ? "border-red-500 animate-[shake_0.3s_ease-in-out]" : digit ? `border-[${color}]/50` : "border-[#1e1e1e]"}
-                  focus:border-[${color}]/60 focus:ring-1 focus:ring-[${color}]/20`}
-                style={digit ? { borderColor: `${color}80` } : error ? { borderColor: "#ef4444" } : {}}
+                className={`h-3.5 w-3.5 rounded-full border transition-all duration-200 ${
+                  error
+                    ? "border-red-500 bg-red-500"
+                    : i < code.length
+                    ? "border-white bg-white"
+                    : "border-[#4a4a4a] bg-transparent"
+                } ${error ? "animate-[shake_0.3s_ease-in-out]" : ""}`}
               />
             ))}
           </div>
 
-          {error && (
-            <p className="text-center text-xs text-red-400 animate-pulse">Passcode salah, coba lagi</p>
-          )}
+          {error && <p className="text-xs text-red-400">Passcode salah</p>}
 
-          {loading && (
-            <div className="flex justify-center">
-              <div className="size-5 animate-spin rounded-full border-2 border-[#1e1e1e]" style={{ borderTopColor: color }} />
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="size-6 animate-spin rounded-full border-2 border-[#1e1e1e]" style={{ borderTopColor: color }} />
+            </div>
+          ) : (
+            /* Number pad */
+            <div className="grid gap-3 px-4">
+              {keys.map((row, ri) => (
+                <div key={ri} className="flex justify-center gap-4">
+                  {row.map((key, ki) => {
+                    if (key === "") return <div key={ki} className="w-[72px] h-[72px]" />;
+                    return (
+                      <button
+                        key={ki}
+                        type="button"
+                        onClick={() => pressKey(key)}
+                        className={`w-[72px] h-[72px] rounded-full border border-[#333] flex items-center justify-center transition-all duration-150
+                          hover:bg-[#222] active:bg-[#333] active:scale-95
+                          ${key === "del" ? "text-[#999]" : "text-white"}`}
+                      >
+                        {key === "del" ? (
+                          <Delete className="h-5 w-5" />
+                        ) : (
+                          <span className="text-2xl font-light">{key}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -160,16 +152,11 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center px-4 overflow-hidden">
-      {/* Gradient orbs */}
       <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-[#3ecf8e]/[0.07] blur-[120px]" />
       <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full bg-[#b4783c]/[0.05] blur-[120px]" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-[#3ecf8e]/[0.03] blur-[100px]" />
-
-      {/* Dot patterns */}
       <div className="absolute top-0 left-0 w-1/2 h-1/2 dot-pattern text-[#3ecf8e] opacity-[0.02]" />
       <div className="absolute bottom-0 right-0 w-1/2 h-1/2 dot-pattern text-[#b4783c] opacity-[0.015]" />
-
-      {/* Top accent line */}
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#3ecf8e]/30 to-transparent" />
 
       <div className="relative z-10 w-full max-w-sm space-y-6">
@@ -185,7 +172,7 @@ export default function LoginPage() {
           <p className="text-sm text-[#6b6b6b]">Farm Management System</p>
         </div>
 
-        {/* Login Form Card */}
+        {/* Login Form */}
         <div className="relative rounded-xl overflow-hidden">
           <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-[#3ecf8e]/25 via-[#1e1e1e] to-[#b4783c]/15 p-px">
             <div className="h-full w-full rounded-xl bg-[#0e0e0e]" />
@@ -218,7 +205,7 @@ export default function LoginPage() {
                 <Shield className="h-4 w-4 text-[#3ecf8e]/60" />
               </div>
               <div>
-                <p className="text-sm font-medium text-[#ccc]">Admin / Pemilik</p>
+                <p className="text-sm font-medium text-[#ccc]">Owner</p>
                 <p className="text-xs text-[#4a4a4a] font-mono">admin@farm.com</p>
               </div>
             </button>
@@ -230,7 +217,7 @@ export default function LoginPage() {
                 <Wrench className="h-4 w-4 text-[#b4783c]/60" />
               </div>
               <div>
-                <p className="text-sm font-medium text-[#ccc]">Pekerja</p>
+                <p className="text-sm font-medium text-[#ccc]">Farm Worker</p>
                 <p className="text-xs text-[#4a4a4a] font-mono">arby@farm.com</p>
               </div>
             </button>
@@ -238,7 +225,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Passcode Modal */}
       {passcodeRole && (
         <PasscodeModal role={passcodeRole} onClose={() => setPasscodeRole(null)} />
       )}
