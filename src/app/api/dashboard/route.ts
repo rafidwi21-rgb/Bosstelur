@@ -104,6 +104,36 @@ export async function GET() {
       0
     );
 
+    // Auto-generate salary expenses on the 25th (or after) if not already created this month
+    const todayDay = todayDate.getDate();
+    if (todayDay >= 25) {
+      const salaryTag = `[salary-auto:${today.slice(0, 7)}]`;
+      const existingSalaryExpense = await prisma.operationalExpense.findFirst({
+        where: { description: { contains: salaryTag } },
+      });
+      if (!existingSalaryExpense) {
+        const activeWorkers = await prisma.user.findMany({
+          where: { role: "WORKER", isActive: true },
+          select: { id: true, name: true, salary: true },
+        });
+        const salaryDate = new Date(todayDate.getFullYear(), todayDate.getMonth(), 25);
+        const monthLabel = new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" }).format(salaryDate);
+        for (const w of activeWorkers) {
+          if (w.salary && w.salary > 0) {
+            await prisma.operationalExpense.create({
+              data: {
+                category: "Gaji",
+                description: `Gaji ${w.name} - ${monthLabel} ${salaryTag}`,
+                amount: w.salary,
+                date: salaryDate,
+                vendor: null,
+              },
+            });
+          }
+        }
+      }
+    }
+
     // Monthly expenses: OperationalExpense + unlinked feed purchases
     const monthlyExpenseRecords = await prisma.operationalExpense.findMany({
       where: {
@@ -127,13 +157,11 @@ export async function GET() {
         },
       },
     });
-    // Extract feed IDs that already have linked expenses (via [ref:xxx] in description)
     const linkedFeedIds = new Set(
       monthlyExpenseRecords
         .map(e => { const m = e.description.match(/\[ref:([^\]]+)\]/); return m ? m[1] : null; })
         .filter(Boolean)
     );
-    // Calculate cost of unlinked feed purchases
     const unlinkedFeedCost = monthlyFeedPurchases
       .filter(f => !linkedFeedIds.has(f.id))
       .reduce((sum, f) => sum + f.quantity * f.costPerUnit, 0);

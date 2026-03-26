@@ -34,7 +34,12 @@ export default function FeedPage() {
     setFeedUsage(usage);
   };
 
-  useEffect(() => { reload(); }, []);
+  // Auto-refresh every 30 seconds to reflect worker feed usage in real-time
+  useEffect(() => {
+    reload();
+    const interval = setInterval(reload, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const totalStock = useMemo(() => inventory.reduce((s, f) => s + f.quantity, 0), [inventory]);
   const currentMonth = store.todayStr().slice(0, 7);
@@ -155,7 +160,7 @@ export default function FeedPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Feed Type</TableHead>
-                      <TableHead>Quantity</TableHead>
+                      <TableHead>Sisa Stok</TableHead>
                       <TableHead>Unit</TableHead>
                       <TableHead>Cost/Unit</TableHead>
                       <TableHead>Supplier</TableHead>

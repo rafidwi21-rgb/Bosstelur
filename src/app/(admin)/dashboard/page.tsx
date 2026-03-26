@@ -82,6 +82,10 @@ export default function DashboardPage() {
 
   useEffect(() => {
     api.getDashboard().then(setData).catch(console.error);
+    const interval = setInterval(() => {
+      api.getDashboard().then(setData).catch(console.error);
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   if (!data) return <div className="flex items-center justify-center h-64"><div className="size-6 animate-spin rounded-full border-2 border-[#1e1e1e] border-t-[#3ecf8e]" /></div>;
