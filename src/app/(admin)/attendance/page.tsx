@@ -50,7 +50,10 @@ export default function AttendancePage() {
   const [filterDate, setFilterDate] = useState(store.todayStr());
 
   useEffect(() => {
-    api.getAttendance(filterDate).then(setAttendance).catch(console.error);
+    const load = () => api.getAttendance(filterDate).then(setAttendance).catch(console.error);
+    load();
+    const interval = setInterval(load, 10000);
+    return () => clearInterval(interval);
   }, [filterDate]);
 
   // Group attendance by user

@@ -55,7 +55,10 @@ export default function HousesPage() {
   const { confirm, confirmDialog } = useConfirm();
 
   useEffect(() => {
-    api.getHouses().then(setHouses).catch(console.error);
+    const load = () => api.getHouses().then(setHouses).catch(console.error);
+    load();
+    const interval = setInterval(load, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   function openAdd() {

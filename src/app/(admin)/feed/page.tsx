@@ -37,7 +37,7 @@ export default function FeedPage() {
   // Auto-refresh every 30 seconds to reflect worker feed usage in real-time
   useEffect(() => {
     reload();
-    const interval = setInterval(reload, 30000);
+    const interval = setInterval(reload, 10000);
     return () => clearInterval(interval);
   }, []);
 

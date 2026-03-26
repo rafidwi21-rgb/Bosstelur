@@ -60,7 +60,10 @@ export default function WorkersPage() {
   const { confirm, confirmDialog } = useConfirm();
 
   useEffect(() => {
-    api.getUsers().then(setUsers).catch(console.error);
+    const load = () => api.getUsers().then(setUsers).catch(console.error);
+    load();
+    const interval = setInterval(load, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const workers = users.filter((u) => u.role === "WORKER");

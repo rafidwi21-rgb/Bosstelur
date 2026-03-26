@@ -85,7 +85,7 @@ export default function DashboardPage() {
     api.getDashboard().then(setData).catch(console.error);
     const interval = setInterval(() => {
       api.getDashboard().then(setData).catch(console.error);
-    }, 30000);
+    }, 10000);
     return () => clearInterval(interval);
   }, []);
 

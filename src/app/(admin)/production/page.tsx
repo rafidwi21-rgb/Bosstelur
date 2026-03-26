@@ -31,8 +31,13 @@ export default function ProductionPage() {
   const [houseFilter, setHouseFilter] = useState("ALL");
 
   useEffect(() => {
-    api.getProduction().then(setProduction).catch(console.error);
-    api.getHouses().then(setHouses).catch(console.error);
+    const load = () => {
+      api.getProduction().then(setProduction).catch(console.error);
+      api.getHouses().then(setHouses).catch(console.error);
+    };
+    load();
+    const interval = setInterval(load, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const today = store.todayStr();

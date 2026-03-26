@@ -27,7 +27,11 @@ export default function SalesPage() {
   const { confirm, confirmDialog } = useConfirm();
 
   const reload = async () => { const data = await api.getSales(); setSales(data); };
-  useEffect(() => { reload(); }, []);
+  useEffect(() => {
+    reload();
+    const interval = setInterval(reload, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const currentMonth = store.todayStr().slice(0, 7);
   const thisMonthSales = useMemo(() => sales.filter(s => (s.date || "").startsWith(currentMonth)), [sales, currentMonth]);

@@ -42,7 +42,11 @@ export default function ExpensesPage() {
     setSales(sal);
   };
 
-  useEffect(() => { reload(); }, []);
+  useEffect(() => {
+    reload();
+    const interval = setInterval(reload, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const currentMonth = store.todayStr().slice(0, 7);
 
