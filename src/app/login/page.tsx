@@ -34,13 +34,6 @@ export default function LoginPage() {
     else { toast.error("Login failed"); setLoading(false); }
   };
 
-  const resetDemoData = () => {
-    if (typeof window !== "undefined") {
-      Object.keys(localStorage).filter(k => k.startsWith("farm_")).forEach(k => localStorage.removeItem(k));
-      toast.success("Demo data reset!");
-    }
-  };
-
   return (
     <div className="relative flex min-h-screen items-center justify-center px-4 overflow-hidden">
       {/* Gradient orbs */}
@@ -91,11 +84,10 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Demo Accounts */}
+        {/* Quick Login */}
         <div className="space-y-3">
-          <p className="text-center text-[10px] text-[#4a4a4a] uppercase tracking-widest">Demo Accounts</p>
+          <p className="text-center text-[10px] text-[#4a4a4a] uppercase tracking-widest">Quick Login</p>
           <div className="grid gap-2">
-            {/* Admin card — gradient left border */}
             <button type="button" onClick={() => quickLogin("admin")}
               className="relative flex items-center gap-3 rounded-xl overflow-hidden bg-[#111]/80 p-3 text-left transition hover:bg-[#161616] group">
               <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-[#3ecf8e]/50 to-[#3ecf8e]/10" />
@@ -103,12 +95,11 @@ export default function LoginPage() {
                 <Shield className="h-4 w-4 text-[#3ecf8e]/60" />
               </div>
               <div>
-                <p className="text-sm font-medium text-[#ccc]">Admin / Farm Owner</p>
+                <p className="text-sm font-medium text-[#ccc]">Admin / Pemilik</p>
                 <p className="text-xs text-[#4a4a4a] font-mono">admin@farm.com</p>
               </div>
             </button>
 
-            {/* Worker card — gradient left border warm */}
             <button type="button" onClick={() => quickLogin("worker")}
               className="relative flex items-center gap-3 rounded-xl overflow-hidden bg-[#111]/80 p-3 text-left transition hover:bg-[#161616] group">
               <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-[#b4783c]/50 to-[#b4783c]/10" />
@@ -116,12 +107,11 @@ export default function LoginPage() {
                 <Wrench className="h-4 w-4 text-[#b4783c]/60" />
               </div>
               <div>
-                <p className="text-sm font-medium text-[#ccc]">Farm Worker</p>
+                <p className="text-sm font-medium text-[#ccc]">Pekerja</p>
                 <p className="text-xs text-[#4a4a4a] font-mono">arby@farm.com</p>
               </div>
             </button>
           </div>
-          <button type="button" onClick={resetDemoData} className="w-full text-center text-[10px] text-[#3a3a3a] hover:text-[#6b6b6b] transition pt-1">Reset Demo Data</button>
         </div>
       </div>
     </div>
