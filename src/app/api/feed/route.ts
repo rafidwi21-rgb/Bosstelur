@@ -8,28 +8,24 @@ export async function GET() {
     });
 
     // Self-heal: verify each feed item's quantity against actual usage
+    // Only for items with a linked expense (so we know the original purchase qty)
     for (const feed of feedInventory) {
-      // Find original purchase quantity from linked expense
       const linkedExpense = await prisma.operationalExpense.findFirst({
         where: { description: { contains: `[ref:${feed.id}]` } },
       });
+      if (!linkedExpense) continue; // skip items without known original qty
 
-      let originalQty = feed.quantity; // fallback
-      if (linkedExpense) {
-        const match = linkedExpense.description.match(/- ([\d.]+) /);
-        if (match) originalQty = parseFloat(match[1]);
-      }
+      const match = linkedExpense.description.match(/- ([\d.]+) /);
+      if (!match) continue;
+      const originalQty = parseFloat(match[1]);
 
-      // Get total usage for this feed item
       const totalUsage = await prisma.feedUsage.aggregate({
         where: { feedId: feed.id },
         _sum: { quantity: true },
       });
       const used = totalUsage._sum.quantity || 0;
-
       const correctRemaining = Math.max(0, originalQty - used);
 
-      // Fix if there's a discrepancy
       if (Math.abs(feed.quantity - correctRemaining) > 0.01) {
         await prisma.feedInventory.update({
           where: { id: feed.id },

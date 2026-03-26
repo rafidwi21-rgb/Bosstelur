@@ -74,11 +74,10 @@ export async function GET() {
       const linkedExpense = await prisma.operationalExpense.findFirst({
         where: { description: { contains: `[ref:${feed.id}]` } },
       });
-      let originalQty = feed.quantity;
-      if (linkedExpense) {
-        const match = linkedExpense.description.match(/- ([\d.]+) /);
-        if (match) originalQty = parseFloat(match[1]);
-      }
+      if (!linkedExpense) continue;
+      const match = linkedExpense.description.match(/- ([\d.]+) /);
+      if (!match) continue;
+      const originalQty = parseFloat(match[1]);
       const totalUsage = await prisma.feedUsage.aggregate({
         where: { feedId: feed.id },
         _sum: { quantity: true },
