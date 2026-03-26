@@ -2,8 +2,9 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { api } from "@/lib/api";
-import { Egg, Users, Wheat, DollarSign, TrendingUp, TrendingDown, Home, ArrowUpRight, ArrowDownRight, Activity, AlertTriangle } from "lucide-react";
+import { Egg, Users, Wheat, DollarSign, TrendingUp, TrendingDown, Home, ArrowUpRight, ArrowDownRight, Activity, AlertTriangle, Download } from "lucide-react";
 import dynamic from "next/dynamic";
+import { Button } from "@/components/ui/button";
 
 const EggChart = dynamic(
   () => import("recharts").then((mod) => {
@@ -100,6 +101,200 @@ export default function DashboardPage() {
   const mappedFeedChart = feedChartData.map((d: any) => ({ date: formatShortDate(d.date), usage: d.quantity }));
   const mappedCheckIns = recentCheckIns.map((a: any) => ({ ...a, userName: a.user?.name || "Unknown" }));
 
+  const exportPDF = async () => {
+    const { default: jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
+
+    const doc = new jsPDF("p", "mm", "a4");
+    const w = doc.internal.pageSize.getWidth();
+    const now = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" });
+    const monthLabel = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric", timeZone: "Asia/Jakarta" });
+    let y = 15;
+
+    // Header
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("Boss Telur - Laporan Dashboard", 14, y);
+    y += 7;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text(`Dicetak: ${now}`, 14, y);
+    y += 3;
+    doc.setDrawColor(62, 207, 142);
+    doc.setLineWidth(0.8);
+    doc.line(14, y, w - 14, y);
+    y += 8;
+    doc.setTextColor(0);
+
+    // === RINGKASAN UTAMA ===
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Ringkasan Utama", 14, y);
+    y += 6;
+
+    autoTable(doc, {
+      startY: y,
+      head: [["Keterangan", "Nilai"]],
+      body: [
+        ["Produksi Telur Hari Ini", `${eggsTodayKg} kg / ${eggsTodayUnit.toLocaleString()} butir`],
+        ["Produksi Kemarin", `${eggsYesterdayKg} kg`],
+        ["Perubahan Produksi", `${eggChange >= 0 ? "+" : ""}${eggChange}%`],
+        ["Pekerja Hadir", `${workersPresent} / ${totalWorkers}`],
+        ["Total Ayam", `${totalChickens.toLocaleString()} ekor`],
+        ["Kapasitas Terisi", `${totalCapacity > 0 ? Math.round((totalChickens / totalCapacity) * 100) : 0}%`],
+        ["Kandang Aktif", `${activeHouses.length}`],
+        ["Stok Pakan", `${feedStock} kg`],
+        ["Pakan Terpakai Hari Ini", `${feedUsedToday} kg`],
+        ["Rata-rata Pakan/Hari", `${avgDailyUsage} kg`],
+        ["Estimasi Stok Pakan", `${feedStockDaysLeft > 999 ? "∞" : feedStockDaysLeft} hari`],
+      ],
+      theme: "striped",
+      headStyles: { fillColor: [62, 207, 142], textColor: 255, fontStyle: "bold" },
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: { 1: { halign: "right", fontStyle: "bold" } },
+    });
+    y = (doc as any).lastAutoTable.finalY + 10;
+
+    // === KEUANGAN ===
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Keuangan - ${monthLabel}`, 14, y);
+    y += 6;
+
+    const financeRows: string[][] = [
+      ["Pendapatan (Penjualan Telur)", formatCurrency(monthlyRevenue)],
+      ["Pendapatan Hari Ini", formatCurrency(todaysRevenue)],
+    ];
+    // Expense breakdown
+    const sortedExpenses = Object.entries(expenseByCategory).sort(([, a]: any, [, b]: any) => b - a);
+    for (const [cat, amt] of sortedExpenses) {
+      financeRows.push([`  Pengeluaran: ${cat}`, `- ${formatCurrency(amt as number)}`]);
+    }
+    financeRows.push(["Total Pengeluaran", `- ${formatCurrency(monthlyExpenses)}`]);
+    financeRows.push(["NET PROFIT", `${profit >= 0 ? "+" : "-"} ${formatCurrency(Math.abs(profit))}`]);
+
+    autoTable(doc, {
+      startY: y,
+      head: [["Keterangan", "Jumlah"]],
+      body: financeRows,
+      theme: "striped",
+      headStyles: { fillColor: [62, 207, 142], textColor: 255, fontStyle: "bold" },
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: { 1: { halign: "right", fontStyle: "bold" } },
+      didParseCell: (data: any) => {
+        // Highlight NET PROFIT row
+        if (data.row.index === financeRows.length - 1) {
+          data.cell.styles.fillColor = profit >= 0 ? [230, 255, 240] : [255, 230, 230];
+          data.cell.styles.fontStyle = "bold";
+          data.cell.styles.fontSize = 10;
+        }
+        // Highlight total pengeluaran
+        if (data.row.index === financeRows.length - 2) {
+          data.cell.styles.fontStyle = "bold";
+        }
+      },
+    });
+    y = (doc as any).lastAutoTable.finalY + 10;
+
+    // === KANDANG AKTIF ===
+    if (activeHouses.length > 0) {
+      if (y > 240) { doc.addPage(); y = 15; }
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Kandang Aktif", 14, y);
+      y += 6;
+
+      autoTable(doc, {
+        startY: y,
+        head: [["Nama", "Tipe", "Populasi", "Kapasitas", "Terisi", "Telur Hari Ini"]],
+        body: activeHouses.map((h: any) => {
+          const pct = h.capacity > 0 ? Math.round((h.currentCount / h.capacity) * 100) : 0;
+          const eggs = (h.eggProductions || []).reduce((s: number, p: any) => s + p.totalKg, 0);
+          return [h.name, h.birdType, `${h.currentCount}`, `${h.capacity}`, `${pct}%`, `${eggs} kg`];
+        }),
+        theme: "striped",
+        headStyles: { fillColor: [62, 207, 142], textColor: 255, fontStyle: "bold" },
+        styles: { fontSize: 9, cellPadding: 3 },
+        columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" } },
+      });
+      y = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // === PRODUKSI TELUR 14 HARI ===
+    if (eggChartData.length > 0) {
+      if (y > 200) { doc.addPage(); y = 15; }
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Produksi Telur - 14 Hari Terakhir", 14, y);
+      y += 6;
+
+      autoTable(doc, {
+        startY: y,
+        head: [["Tanggal", "Berat (kg)", "Jumlah (butir)"]],
+        body: eggChartData.map((d: any) => [formatShortDate(d.date), `${d.totalKg}`, `${d.totalUnit}`]),
+        theme: "striped",
+        headStyles: { fillColor: [62, 207, 142], textColor: 255, fontStyle: "bold" },
+        styles: { fontSize: 8, cellPadding: 2.5 },
+        columnStyles: { 1: { halign: "right" }, 2: { halign: "right" } },
+      });
+      y = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // === PEMAKAIAN PAKAN 14 HARI ===
+    if (feedChartData.length > 0) {
+      if (y > 200) { doc.addPage(); y = 15; }
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Pemakaian Pakan - 14 Hari Terakhir", 14, y);
+      y += 6;
+
+      autoTable(doc, {
+        startY: y,
+        head: [["Tanggal", "Pemakaian (kg)"]],
+        body: feedChartData.map((d: any) => [formatShortDate(d.date), `${d.quantity}`]),
+        theme: "striped",
+        headStyles: { fillColor: [245, 158, 11], textColor: 255, fontStyle: "bold" },
+        styles: { fontSize: 8, cellPadding: 2.5 },
+        columnStyles: { 1: { halign: "right" } },
+      });
+      y = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // === ABSENSI HARI INI ===
+    if (recentCheckIns.length > 0) {
+      if (y > 230) { doc.addPage(); y = 15; }
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Absensi Hari Ini", 14, y);
+      y += 6;
+
+      autoTable(doc, {
+        startY: y,
+        head: [["Nama", "Waktu Check-in"]],
+        body: mappedCheckIns.map((a: any) => {
+          const time = new Date(a.timestamp).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
+          return [a.userName, `${time} WIB`];
+        }),
+        theme: "striped",
+        headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: "bold" },
+        styles: { fontSize: 9, cellPadding: 3 },
+      });
+    }
+
+    // Footer on all pages
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(`Boss Telur - Halaman ${i}/${totalPages}`, 14, doc.internal.pageSize.getHeight() - 8);
+      doc.text("Generated by Boss Telur Farm Management", w - 14, doc.internal.pageSize.getHeight() - 8, { align: "right" });
+    }
+
+    doc.save(`Dashboard_BossTelur_${new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" })}.pdf`);
+  };
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -108,7 +303,13 @@ export default function DashboardPage() {
           <p className="text-xs text-neutral-600 uppercase tracking-widest mb-1">Overview</p>
           <h1 className="text-2xl font-bold tracking-tight text-white">Dashboard</h1>
         </div>
-        <p className="text-xs text-neutral-600 font-mono">{new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
+        <div className="flex items-center gap-3">
+          <p className="text-xs text-neutral-600 font-mono hidden sm:block">{new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
+          <Button size="sm" variant="outline" onClick={exportPDF} className="border-[#3ecf8e]/30 text-[#3ecf8e] hover:bg-[#3ecf8e]/10 hover:text-[#3ecf8e]">
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            Export PDF
+          </Button>
+        </div>
       </div>
 
       {/* Low Stock Alert */}
