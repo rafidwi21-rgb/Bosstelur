@@ -7,6 +7,38 @@ export async function GET() {
       orderBy: { purchaseDate: "desc" },
     });
 
+    // Self-heal: verify each feed item's quantity against actual usage
+    for (const feed of feedInventory) {
+      // Find original purchase quantity from linked expense
+      const linkedExpense = await prisma.operationalExpense.findFirst({
+        where: { description: { contains: `[ref:${feed.id}]` } },
+      });
+
+      let originalQty = feed.quantity; // fallback
+      if (linkedExpense) {
+        const match = linkedExpense.description.match(/- ([\d.]+) /);
+        if (match) originalQty = parseFloat(match[1]);
+      }
+
+      // Get total usage for this feed item
+      const totalUsage = await prisma.feedUsage.aggregate({
+        where: { feedId: feed.id },
+        _sum: { quantity: true },
+      });
+      const used = totalUsage._sum.quantity || 0;
+
+      const correctRemaining = Math.max(0, originalQty - used);
+
+      // Fix if there's a discrepancy
+      if (Math.abs(feed.quantity - correctRemaining) > 0.01) {
+        await prisma.feedInventory.update({
+          where: { id: feed.id },
+          data: { quantity: correctRemaining },
+        });
+        feed.quantity = correctRemaining;
+      }
+    }
+
     return NextResponse.json(feedInventory);
   } catch (error) {
     console.error("Get feed inventory error:", error);

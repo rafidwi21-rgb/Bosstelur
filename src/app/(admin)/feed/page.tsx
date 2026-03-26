@@ -44,7 +44,7 @@ export default function FeedPage() {
   const totalStock = useMemo(() => inventory.reduce((s, f) => s + f.quantity, 0), [inventory]);
   const currentMonth = store.todayStr().slice(0, 7);
   const monthlyUsage = useMemo(() => feedUsage.filter((u: any) => (u.date || "").startsWith(currentMonth)).reduce((s: number, u: any) => s + u.quantity, 0), [feedUsage, currentMonth]);
-  const lowStockItems = useMemo(() => inventory.filter(f => f.quantity < 100), [inventory]);
+  const lowStockItems = useMemo(() => inventory.filter(f => f.quantity < 50), [inventory]);
   const sortedUsage = useMemo(() => [...feedUsage].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()), [feedUsage]);
 
   // Estimasi hari stok habis berdasarkan rata-rata pemakaian harian
@@ -141,7 +141,7 @@ export default function FeedPage() {
         </CardContent></Card>
         <Card><CardContent className="flex items-center gap-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-500/10 text-red-400"><AlertTriangle className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold">{lowStockItems.length}</p><p className="text-xs text-muted-foreground">Low Stock (&lt;100kg)</p></div>
+          <div><p className="text-2xl font-bold">{lowStockItems.length}</p><p className="text-xs text-muted-foreground">Low Stock (&lt;50kg)</p></div>
         </CardContent></Card>
       </div>
 
@@ -179,7 +179,7 @@ export default function FeedPage() {
                         <TableCell>{feed.supplier || "-"}</TableCell>
                         <TableCell>{formatDate(feed.purchaseDate)}</TableCell>
                         <TableCell>
-                          {feed.quantity < 100
+                          {feed.quantity < 50
                             ? <Badge variant="destructive">Low Stock</Badge>
                             : <Badge variant="secondary">In Stock</Badge>}
                         </TableCell>

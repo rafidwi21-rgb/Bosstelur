@@ -68,8 +68,31 @@ export async function GET() {
       where: { role: "WORKER", isActive: true },
     });
 
-    // Feed stock
+    // Feed stock (with self-healing verification)
     const feedInventory = await prisma.feedInventory.findMany();
+    for (const feed of feedInventory) {
+      const linkedExpense = await prisma.operationalExpense.findFirst({
+        where: { description: { contains: `[ref:${feed.id}]` } },
+      });
+      let originalQty = feed.quantity;
+      if (linkedExpense) {
+        const match = linkedExpense.description.match(/- ([\d.]+) /);
+        if (match) originalQty = parseFloat(match[1]);
+      }
+      const totalUsage = await prisma.feedUsage.aggregate({
+        where: { feedId: feed.id },
+        _sum: { quantity: true },
+      });
+      const used = totalUsage._sum.quantity || 0;
+      const correctRemaining = Math.max(0, originalQty - used);
+      if (Math.abs(feed.quantity - correctRemaining) > 0.01) {
+        await prisma.feedInventory.update({
+          where: { id: feed.id },
+          data: { quantity: correctRemaining },
+        });
+        feed.quantity = correctRemaining;
+      }
+    }
     const feedStock = feedInventory.reduce((sum, f) => sum + f.quantity, 0);
 
     // Feed used today
@@ -191,9 +214,9 @@ export async function GET() {
     const avgDailyUsage = daysWithUsage > 0 ? totalRecentUsage / daysWithUsage : 0;
     const feedStockDaysLeft = avgDailyUsage > 0 ? Math.floor(feedStock / avgDailyUsage) : feedStock > 0 ? 999 : 0;
 
-    // Low stock feeds (< 100kg remaining)
+    // Low stock feeds (< 50kg remaining)
     const lowStockFeeds = feedInventory
-      .filter(f => f.quantity < 100)
+      .filter(f => f.quantity < 50)
       .map(f => ({ id: f.id, feedType: f.feedType, quantity: f.quantity, unit: f.unit }));
 
     // Active houses with today's production
