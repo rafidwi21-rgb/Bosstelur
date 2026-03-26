@@ -68,30 +68,8 @@ export async function GET() {
       where: { role: "WORKER", isActive: true },
     });
 
-    // Feed stock (with self-healing verification)
+    // Feed stock — quantity is kept accurate by $transaction decrement in feed usage API
     const feedInventory = await prisma.feedInventory.findMany();
-    for (const feed of feedInventory) {
-      const linkedExpense = await prisma.operationalExpense.findFirst({
-        where: { description: { contains: `[ref:${feed.id}]` } },
-      });
-      if (!linkedExpense) continue;
-      const match = linkedExpense.description.match(/- ([\d.]+) /);
-      if (!match) continue;
-      const originalQty = parseFloat(match[1]);
-      const totalUsage = await prisma.feedUsage.aggregate({
-        where: { feedId: feed.id },
-        _sum: { quantity: true },
-      });
-      const used = totalUsage._sum.quantity || 0;
-      const correctRemaining = Math.max(0, originalQty - used);
-      if (Math.abs(feed.quantity - correctRemaining) > 0.01) {
-        await prisma.feedInventory.update({
-          where: { id: feed.id },
-          data: { quantity: correctRemaining },
-        });
-        feed.quantity = correctRemaining;
-      }
-    }
     const feedStock = feedInventory.reduce((sum, f) => sum + f.quantity, 0);
 
     // Feed used today
