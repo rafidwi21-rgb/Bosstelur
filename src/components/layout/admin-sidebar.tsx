@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChickenBossIcon } from "@/components/logo/chicken-boss";
-import { LayoutDashboard, Home, Users, Egg, Wheat, DollarSign, Clock, FileText } from "lucide-react";
+import { LayoutDashboard, Home, Users, Egg, Wheat, DollarSign, Clock, FileText, Receipt } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -12,6 +12,7 @@ const navItems = [
   { label: "Production", href: "/production", icon: Egg },
   { label: "Feed", href: "/feed", icon: Wheat },
   { label: "Sales", href: "/sales", icon: DollarSign },
+  { label: "Pengeluaran", href: "/expenses", icon: Receipt },
   { label: "Attendance", href: "/attendance", icon: Clock },
   { label: "Reports", href: "/reports", icon: FileText },
 ];

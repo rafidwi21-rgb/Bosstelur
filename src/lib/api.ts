@@ -99,6 +99,7 @@ export const api = {
     return fetchJSON<any[]>(`/expenses?${params}`);
   },
   createExpense: (data: any) => fetchJSON("/expenses", { method: "POST", body: JSON.stringify(data) }),
+  deleteExpense: (id: string) => fetchJSON(`/expenses?id=${id}`, { method: "DELETE" }),
 
   // Dashboard
   getDashboard: () => fetchJSON<any>("/dashboard"),

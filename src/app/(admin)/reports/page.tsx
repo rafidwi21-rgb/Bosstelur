@@ -60,6 +60,7 @@ export default function ReportsPage() {
   const [houses, setHouses] = useState<any[]>([]);
   const [production, setProduction] = useState<any[]>([]);
   const [feedUsage, setFeedUsage] = useState<any[]>([]);
+  const [feedInventory, setFeedInventory] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -68,6 +69,7 @@ export default function ReportsPage() {
     api.getHouses().then(setHouses).catch(console.error);
     api.getProduction().then(setProduction).catch(console.error);
     api.getFeedUsage().then(setFeedUsage).catch(console.error);
+    api.getFeedInventory().then(setFeedInventory).catch(console.error);
     api.getSales().then(setSales).catch(console.error);
     api.getAttendance().then(setAttendance).catch(console.error);
     api.getExpenses().then(setExpenses).catch(console.error);
@@ -271,10 +273,16 @@ export default function ReportsPage() {
           (s: number, sale: any) => s + sale.totalAmount,
           0
         );
+        const pLinkedFeedIds = new Set(
+          filteredExpenses.map((e: any) => { const m = (e.description || "").match(/\[ref:([^\]]+)\]/); return m ? m[1] : null; }).filter(Boolean)
+        );
+        const pUnlinkedFeedCost = feedInventory
+          .filter((f: any) => !pLinkedFeedIds.has(f.id) && inRange(f.purchaseDate))
+          .reduce((s: number, f: any) => s + f.quantity * f.costPerUnit, 0);
         const totalExpense = filteredExpenses.reduce(
           (s: number, e: any) => s + e.amount,
           0
-        );
+        ) + pUnlinkedFeedCost;
         const net = totalRevenue - totalExpense;
         return [
           {
@@ -426,11 +434,19 @@ export default function ReportsPage() {
           <div className="overflow-x-auto">
             {reportType === "Profit" && (() => {
               const totalRevenue = filteredSales.reduce((s: number, sale: any) => s + sale.totalAmount, 0);
-              const totalExpense = filteredExpenses.reduce((s: number, e: any) => s + e.amount, 0);
+              // Include unlinked feed purchases
+              const linkedFeedIds = new Set(
+                filteredExpenses.map((e: any) => { const m = (e.description || "").match(/\[ref:([^\]]+)\]/); return m ? m[1] : null; }).filter(Boolean)
+              );
+              const unlinkedFeedCost = feedInventory
+                .filter((f: any) => !linkedFeedIds.has(f.id) && inRange(f.purchaseDate))
+                .reduce((s: number, f: any) => s + f.quantity * f.costPerUnit, 0);
+              const totalExpense = filteredExpenses.reduce((s: number, e: any) => s + e.amount, 0) + unlinkedFeedCost;
               const net = totalRevenue - totalExpense;
               // Group expenses by category
               const byCategory: Record<string, number> = {};
               for (const e of filteredExpenses) { byCategory[e.category] = (byCategory[e.category] || 0) + e.amount; }
+              if (unlinkedFeedCost > 0) { byCategory["Pakan"] = (byCategory["Pakan"] || 0) + unlinkedFeedCost; }
               const sortedCategories = Object.entries(byCategory).sort(([,a], [,b]) => (b as number) - (a as number));
               return (
                 <Table>

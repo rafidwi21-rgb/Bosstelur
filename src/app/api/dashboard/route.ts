@@ -104,7 +104,7 @@ export async function GET() {
       0
     );
 
-    // Monthly expenses (all in OperationalExpense — feed purchases auto-included)
+    // Monthly expenses: OperationalExpense + unlinked feed purchases
     const monthlyExpenseRecords = await prisma.operationalExpense.findMany({
       where: {
         date: {
@@ -113,15 +113,40 @@ export async function GET() {
         },
       },
     });
-    const monthlyExpenses = monthlyExpenseRecords.reduce(
+    const operationalTotal = monthlyExpenseRecords.reduce(
       (sum, e) => sum + e.amount,
       0
     );
+
+    // Find feed purchases this month that DON'T have auto-created expenses
+    const monthlyFeedPurchases = await prisma.feedInventory.findMany({
+      where: {
+        purchaseDate: {
+          gte: monthStart,
+          lte: monthEnd,
+        },
+      },
+    });
+    // Extract feed IDs that already have linked expenses (via [ref:xxx] in description)
+    const linkedFeedIds = new Set(
+      monthlyExpenseRecords
+        .map(e => { const m = e.description.match(/\[ref:([^\]]+)\]/); return m ? m[1] : null; })
+        .filter(Boolean)
+    );
+    // Calculate cost of unlinked feed purchases
+    const unlinkedFeedCost = monthlyFeedPurchases
+      .filter(f => !linkedFeedIds.has(f.id))
+      .reduce((sum, f) => sum + f.quantity * f.costPerUnit, 0);
+
+    const monthlyExpenses = operationalTotal + unlinkedFeedCost;
 
     // Expense breakdown by category
     const expenseByCategory: Record<string, number> = {};
     for (const e of monthlyExpenseRecords) {
       expenseByCategory[e.category] = (expenseByCategory[e.category] || 0) + e.amount;
+    }
+    if (unlinkedFeedCost > 0) {
+      expenseByCategory["Pakan"] = (expenseByCategory["Pakan"] || 0) + unlinkedFeedCost;
     }
 
     // Net profit
