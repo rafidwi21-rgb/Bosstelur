@@ -174,7 +174,7 @@ export default function DashboardPage() {
     for (const [cat, amt] of sortedExpenses) {
       financeRows.push([`  Pengeluaran: ${cat}`, `- ${formatCurrency(amt as number)}`]);
     }
-    financeRows.push(["Total Pengeluaran", `- ${formatCurrency(monthlyExpenses)}`]);
+    financeRows.push(["Pengeluaran Bulan Ini", `- ${formatCurrency(monthlyExpenses)}`]);
     financeRows.push(["NET PROFIT", `${profit >= 0 ? "+" : "-"} ${formatCurrency(Math.abs(profit))}`]);
 
     autoTable(doc, {
@@ -366,7 +366,7 @@ export default function DashboardPage() {
           <div className={`rounded-2xl border ${profit >= 0 ? "border-[#3ecf8e]/30 bg-[#3ecf8e]/[0.04]" : "border-red-500/30 bg-red-950/20"} p-4`}>
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className={`h-3.5 w-3.5 ${profit >= 0 ? "text-[#3ecf8e]" : "text-red-400"}`} />
-              <span className="text-[10px] text-neutral-500 uppercase tracking-widest">Net Profit Keseluruhan</span>
+              <span className="text-[10px] text-neutral-500 uppercase tracking-widest">Net Profit Bulan Ini</span>
             </div>
             <p className={`text-2xl font-bold ${profit >= 0 ? "text-[#3ecf8e]" : "text-red-400"}`}>
               {profit >= 0 ? "+" : "-"}{formatCurrency(Math.abs(profit))}
@@ -379,7 +379,7 @@ export default function DashboardPage() {
           <div className="flex-1 rounded-2xl border border-neutral-800/60 bg-neutral-900/50 p-4">
             <div className="flex items-center gap-2 mb-2">
               <DollarSign className="h-3.5 w-3.5 text-[#3ecf8e]" />
-              <span className="text-[10px] text-neutral-500 uppercase tracking-widest">Total Pendapatan</span>
+              <span className="text-[10px] text-neutral-500 uppercase tracking-widest">Pendapatan Bulan Ini</span>
             </div>
             <p className="text-xl font-bold text-white">{formatCurrency(monthlyRevenue)}</p>
             <p className="text-[11px] text-neutral-600 mt-1">Hari ini: {formatCurrency(todaysRevenue)}</p>
@@ -387,7 +387,7 @@ export default function DashboardPage() {
           <div className="flex-1 rounded-2xl border border-neutral-800/60 bg-neutral-900/50 p-4">
             <div className="flex items-center gap-2 mb-2">
               <TrendingDown className="h-3.5 w-3.5 text-red-400" />
-              <span className="text-[10px] text-neutral-500 uppercase tracking-widest">Total Pengeluaran</span>
+              <span className="text-[10px] text-neutral-500 uppercase tracking-widest">Pengeluaran Bulan Ini</span>
             </div>
             <p className="text-xl font-bold text-white">{formatCurrency(monthlyExpenses)}</p>
             {Object.keys(expenseByCategory).length > 0 && (
@@ -561,7 +561,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="h-2 w-2 rounded-full bg-[#3ecf8e]" />
-                <span className="text-sm text-neutral-400">Profit Keseluruhan</span>
+                <span className="text-sm text-neutral-400">Profit Bulan Ini</span>
               </div>
               <span className={`text-sm font-semibold tabular-nums ${profit >= 0 ? "text-[#3ecf8e]" : "text-red-400"}`}>
                 {profit >= 0 ? "+" : ""}{formatCurrency(profit)}

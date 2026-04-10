@@ -84,9 +84,11 @@ export async function GET() {
       0
     );
 
-    // All-time revenue (total penjualan)
-    const allSales = await prisma.eggSale.findMany();
-    const totalRevenue = allSales.reduce((sum, s) => sum + s.totalAmount, 0);
+    // Monthly revenue
+    const monthlySales = await prisma.eggSale.findMany({
+      where: { date: { gte: monthStart, lte: monthEnd } },
+    });
+    const monthlyRevenue = monthlySales.reduce((sum, s) => sum + s.totalAmount, 0);
 
     // Auto-generate salary expenses on the 25th (or after) if not already created this month
     const todayDay = todayDate.getDate();
@@ -118,26 +120,29 @@ export async function GET() {
       }
     }
 
-    // All-time expenses: OperationalExpense + unlinked feed purchases
-    const allExpenseRecords = await prisma.operationalExpense.findMany();
-    const operationalTotal = allExpenseRecords.reduce((sum, e) => sum + e.amount, 0);
+    // Monthly expenses: OperationalExpense + unlinked feed purchases
+    const monthlyExpenseRecords = await prisma.operationalExpense.findMany({
+      where: { date: { gte: monthStart, lte: monthEnd } },
+    });
+    const operationalTotal = monthlyExpenseRecords.reduce((sum, e) => sum + e.amount, 0);
 
-    // Find feed purchases that DON'T have auto-created expenses
-    const allFeedPurchases = await prisma.feedInventory.findMany();
+    const monthlyFeedPurchases = await prisma.feedInventory.findMany({
+      where: { purchaseDate: { gte: monthStart, lte: monthEnd } },
+    });
     const linkedFeedIds = new Set(
-      allExpenseRecords
+      monthlyExpenseRecords
         .map(e => { const m = e.description.match(/\[ref:([^\]]+)\]/); return m ? m[1] : null; })
         .filter(Boolean)
     );
-    const unlinkedFeedCost = allFeedPurchases
+    const unlinkedFeedCost = monthlyFeedPurchases
       .filter(f => !linkedFeedIds.has(f.id))
       .reduce((sum, f) => sum + (f.initialQuantity || f.quantity) * f.costPerUnit, 0);
 
-    const totalExpenses = operationalTotal + unlinkedFeedCost;
+    const monthlyExpenses = operationalTotal + unlinkedFeedCost;
 
     // Expense breakdown by category
     const expenseByCategory: Record<string, number> = {};
-    for (const e of allExpenseRecords) {
+    for (const e of monthlyExpenseRecords) {
       expenseByCategory[e.category] = (expenseByCategory[e.category] || 0) + e.amount;
     }
     if (unlinkedFeedCost > 0) {
@@ -145,7 +150,7 @@ export async function GET() {
     }
 
     // Net profit
-    const netProfit = totalRevenue - totalExpenses;
+    const netProfit = monthlyRevenue - monthlyExpenses;
 
     // Feed stock estimation: days left based on avg daily usage (last 14 days)
     const last14Days = new Date(todayDate);
@@ -281,8 +286,8 @@ export async function GET() {
       feedStockDaysLeft,
       lowStockFeeds,
       todaysRevenue,
-      monthlyRevenue: totalRevenue,
-      monthlyExpenses: totalExpenses,
+      monthlyRevenue,
+      monthlyExpenses,
       expenseByCategory,
       netProfit,
       activeHouses,
