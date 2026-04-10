@@ -30,14 +30,9 @@ function fmtDate(d: string) {
 // Normalize any date string/ISO to YYYY-MM-DD for comparison
 function toDateStr(d: string) { return (d || "").split("T")[0]; }
 
-function getLast30DaysStart(): string {
-  const d = new Date(); d.setDate(d.getDate() - 29);
-  return d.toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
-}
-
 export default function ReportsPage() {
   const [reportType, setReportType] = useState<ReportType>("Profit");
-  const [dateFrom, setDateFrom] = useState(getLast30DaysStart());
+  const [dateFrom, setDateFrom] = useState("2026-01-01");
   const [dateTo, setDateTo] = useState(store.todayStr());
   const [houseFilter, setHouseFilter] = useState("ALL");
 

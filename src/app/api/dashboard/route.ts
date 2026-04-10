@@ -11,16 +11,10 @@ export async function GET() {
     const yesterdayStr = yesterday.toISOString().split("T")[0];
     const yesterdayDate = new Date(yesterdayStr);
 
-    const monthStart = new Date(
-      todayDate.getFullYear(),
-      todayDate.getMonth(),
-      1
-    );
-    const monthEnd = new Date(
-      todayDate.getFullYear(),
-      todayDate.getMonth() + 1,
-      0
-    );
+    // Use WIB-aware dates for month range (dates stored as @db.Date are UTC midnight)
+    const monthStart = new Date(`${today.slice(0, 7)}-01`);
+    const lastDay = new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0).getDate();
+    const monthEnd = new Date(`${today.slice(0, 7)}-${String(lastDay).padStart(2, "0")}`);
 
     // Total chickens
     const houses = await prisma.poultryHouse.findMany({
@@ -90,19 +84,9 @@ export async function GET() {
       0
     );
 
-    // Monthly revenue
-    const monthlySales = await prisma.eggSale.findMany({
-      where: {
-        date: {
-          gte: monthStart,
-          lte: monthEnd,
-        },
-      },
-    });
-    const monthlyRevenue = monthlySales.reduce(
-      (sum, s) => sum + s.totalAmount,
-      0
-    );
+    // All-time revenue (total penjualan)
+    const allSales = await prisma.eggSale.findMany();
+    const totalRevenue = allSales.reduce((sum, s) => sum + s.totalAmount, 0);
 
     // Auto-generate salary expenses on the 25th (or after) if not already created this month
     const todayDay = todayDate.getDate();
@@ -134,43 +118,26 @@ export async function GET() {
       }
     }
 
-    // Monthly expenses: OperationalExpense + unlinked feed purchases
-    const monthlyExpenseRecords = await prisma.operationalExpense.findMany({
-      where: {
-        date: {
-          gte: monthStart,
-          lte: monthEnd,
-        },
-      },
-    });
-    const operationalTotal = monthlyExpenseRecords.reduce(
-      (sum, e) => sum + e.amount,
-      0
-    );
+    // All-time expenses: OperationalExpense + unlinked feed purchases
+    const allExpenseRecords = await prisma.operationalExpense.findMany();
+    const operationalTotal = allExpenseRecords.reduce((sum, e) => sum + e.amount, 0);
 
-    // Find feed purchases this month that DON'T have auto-created expenses
-    const monthlyFeedPurchases = await prisma.feedInventory.findMany({
-      where: {
-        purchaseDate: {
-          gte: monthStart,
-          lte: monthEnd,
-        },
-      },
-    });
+    // Find feed purchases that DON'T have auto-created expenses
+    const allFeedPurchases = await prisma.feedInventory.findMany();
     const linkedFeedIds = new Set(
-      monthlyExpenseRecords
+      allExpenseRecords
         .map(e => { const m = e.description.match(/\[ref:([^\]]+)\]/); return m ? m[1] : null; })
         .filter(Boolean)
     );
-    const unlinkedFeedCost = monthlyFeedPurchases
+    const unlinkedFeedCost = allFeedPurchases
       .filter(f => !linkedFeedIds.has(f.id))
       .reduce((sum, f) => sum + (f.initialQuantity || f.quantity) * f.costPerUnit, 0);
 
-    const monthlyExpenses = operationalTotal + unlinkedFeedCost;
+    const totalExpenses = operationalTotal + unlinkedFeedCost;
 
     // Expense breakdown by category
     const expenseByCategory: Record<string, number> = {};
-    for (const e of monthlyExpenseRecords) {
+    for (const e of allExpenseRecords) {
       expenseByCategory[e.category] = (expenseByCategory[e.category] || 0) + e.amount;
     }
     if (unlinkedFeedCost > 0) {
@@ -178,7 +145,7 @@ export async function GET() {
     }
 
     // Net profit
-    const netProfit = monthlyRevenue - monthlyExpenses;
+    const netProfit = totalRevenue - totalExpenses;
 
     // Feed stock estimation: days left based on avg daily usage (last 14 days)
     const last14Days = new Date(todayDate);
@@ -314,8 +281,8 @@ export async function GET() {
       feedStockDaysLeft,
       lowStockFeeds,
       todaysRevenue,
-      monthlyRevenue,
-      monthlyExpenses,
+      monthlyRevenue: totalRevenue,
+      monthlyExpenses: totalExpenses,
       expenseByCategory,
       netProfit,
       activeHouses,
