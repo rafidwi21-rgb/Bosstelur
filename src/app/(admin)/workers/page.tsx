@@ -62,7 +62,7 @@ export default function WorkersPage() {
   useEffect(() => {
     const load = () => api.getUsers().then(setUsers).catch(console.error);
     load();
-    const interval = setInterval(load, 10000);
+    const interval = setInterval(load, 30000);
     return () => clearInterval(interval);
   }, []);
 

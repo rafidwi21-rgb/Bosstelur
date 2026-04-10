@@ -98,17 +98,18 @@ export default function ReportsPage() {
     switch (reportType) {
       case "Production":
         return {
-          headers: ["Tanggal", "Kandang", "Petugas", "Total (kg)", "Rusak (kg)", "Baik (kg)"],
+          headers: ["Tanggal", "Kandang", "Pekerja", "Total (butir)", "Pecah (butir)", "Bagus (butir)", "Total (kg)"],
           rows: filteredProduction.map((p: any) => [
             fmtDate(p.date), p.house?.name || p.houseName || "-", p.collector?.name || p.collectorName || "-",
-            String(p.totalKg), String(p.brokenKg), String(p.goodKg),
+            String(p.totalUnit || 0), String(p.brokenUnit || 0), String(p.goodUnit || 0), String(p.totalKg || 0),
           ]),
         };
       case "Feed":
         return {
-          headers: ["Tanggal", "Kandang", "Jenis Pakan", "Jumlah (kg)", "Pekerja"],
+          headers: ["Tanggal", "Waktu", "Kandang", "Jenis Pakan", "Jumlah (kg)", "Pekerja"],
           rows: filteredFeedUsage.map((f: any) => [
-            fmtDate(f.date), f.house?.name || "-", f.feed?.feedType || "-",
+            fmtDate(f.date), f.timeSlot === "MORNING" ? "Pagi" : f.timeSlot === "EVENING" ? "Sore" : "-",
+            f.house?.name || "-", f.feed?.feedType || "-",
             String(f.quantity), f.worker?.name || "-",
           ]),
         };
@@ -144,7 +145,7 @@ export default function ReportsPage() {
         );
         const unlinkedFeedCost = feedInventory
           .filter((f: any) => !linkedFeedIds.has(f.id) && inRange(f.purchaseDate))
-          .reduce((s: number, f: any) => s + f.quantity * f.costPerUnit, 0);
+          .reduce((s: number, f: any) => s + (f.initialQuantity || f.quantity) * f.costPerUnit, 0);
         const totalExpense = filteredExpenses.reduce((s: number, e: any) => s + e.amount, 0) + unlinkedFeedCost;
         const byCategory: Record<string, number> = {};
         for (const e of filteredExpenses) { byCategory[e.category] = (byCategory[e.category] || 0) + e.amount; }
@@ -165,23 +166,26 @@ export default function ReportsPage() {
   const summaryStats = useMemo(() => {
     switch (reportType) {
       case "Production": {
-        const totalKg = filteredProduction.reduce((s: number, p: any) => s + p.totalKg, 0);
-        const totalGood = filteredProduction.reduce((s: number, p: any) => s + p.goodKg, 0);
-        const totalBroken = filteredProduction.reduce((s: number, p: any) => s + p.brokenKg, 0);
+        const totalGood = filteredProduction.reduce((s: number, p: any) => s + (p.goodUnit || 0), 0);
+        const totalBroken = filteredProduction.reduce((s: number, p: any) => s + (p.brokenUnit || 0), 0);
+        const totalKg = filteredProduction.reduce((s: number, p: any) => s + (p.totalKg || 0), 0);
         return [
-          { label: "Total Kg", value: totalKg.toLocaleString(), icon: Egg },
-          { label: "Baik (kg)", value: totalGood.toLocaleString(), icon: Egg },
-          { label: "Rusak (kg)", value: totalBroken.toLocaleString(), icon: Egg },
+          { label: "Telur Bagus", value: `${totalGood.toLocaleString()} butir`, icon: Egg },
+          { label: "Telur Pecah", value: `${totalBroken.toLocaleString()} butir`, icon: Egg },
+          { label: "Total Berat", value: `${totalKg.toLocaleString()} kg`, icon: Egg },
         ];
       }
       case "Feed": {
         const totalUsed = filteredFeedUsage.reduce((s: number, f: any) => s + f.quantity, 0);
         const days = new Set(filteredFeedUsage.map((f: any) => toDateStr(f.date))).size;
         const avg = days > 0 ? Math.round(totalUsed / days) : 0;
+        const totalStock = feedInventory.reduce((s: number, f: any) => s + f.quantity, 0);
+        const karung = Math.floor(totalStock / 50);
+        const sisaKg = Math.round(totalStock % 50);
         return [
           { label: "Total Terpakai", value: `${totalUsed.toLocaleString()} kg`, icon: Wheat },
           { label: "Rata-rata/Hari", value: `${avg.toLocaleString()} kg`, icon: Wheat },
-          { label: "Catatan", value: filteredFeedUsage.length.toString(), icon: FileText },
+          { label: "Sisa Stok", value: `${totalStock.toLocaleString()} kg (${karung} karung${sisaKg > 0 ? ` + ${sisaKg} kg` : ""})`, icon: Wheat },
         ];
       }
       case "Sales": {
@@ -216,7 +220,7 @@ export default function ReportsPage() {
       case "Profit": {
         const totalRev = filteredSales.reduce((s: number, sale: any) => s + sale.totalAmount, 0);
         const linkedIds = new Set(filteredExpenses.map((e: any) => { const m = (e.description || "").match(/\[ref:([^\]]+)\]/); return m ? m[1] : null; }).filter(Boolean));
-        const ufc = feedInventory.filter((f: any) => !linkedIds.has(f.id) && inRange(f.purchaseDate)).reduce((s: number, f: any) => s + f.quantity * f.costPerUnit, 0);
+        const ufc = feedInventory.filter((f: any) => !linkedIds.has(f.id) && inRange(f.purchaseDate)).reduce((s: number, f: any) => s + (f.initialQuantity || f.quantity) * f.costPerUnit, 0);
         const totalExp = filteredExpenses.reduce((s: number, e: any) => s + e.amount, 0) + ufc;
         const net = totalRev - totalExp;
         return [

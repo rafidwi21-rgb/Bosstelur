@@ -5,9 +5,25 @@ export async function GET() {
   try {
     const feedInventory = await prisma.feedInventory.findMany({
       orderBy: { purchaseDate: "desc" },
+      include: {
+        usages: {
+          select: { quantity: true, timeSlot: true, date: true },
+        },
+      },
     });
 
-    return NextResponse.json(feedInventory);
+    // Calculate totalUsed per inventory item
+    const result = feedInventory.map((f) => {
+      const totalUsed = f.usages.reduce((sum, u) => sum + u.quantity, 0);
+      return {
+        ...f,
+        initialQuantity: f.initialQuantity || (f.quantity + totalUsed),
+        totalUsed,
+        usages: undefined,
+      };
+    });
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Get feed inventory error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -26,6 +42,7 @@ export async function POST(request: NextRequest) {
       data: {
         feedType: body.feedType,
         quantity,
+        initialQuantity: quantity,
         unit: body.unit || "kg",
         costPerUnit,
         supplier: body.supplier || null,
@@ -46,7 +63,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json(feed, { status: 201 });
+    return NextResponse.json({ ...feed, initialQuantity: quantity, totalUsed: 0 }, { status: 201 });
   } catch (error) {
     console.error("Create feed error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

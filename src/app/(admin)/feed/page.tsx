@@ -37,7 +37,7 @@ export default function FeedPage() {
   // Auto-refresh every 30 seconds to reflect worker feed usage in real-time
   useEffect(() => {
     reload();
-    const interval = setInterval(reload, 10000);
+    const interval = setInterval(reload, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -118,7 +118,7 @@ export default function FeedPage() {
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-400"><Package className="h-5 w-5" /></div>
           <div>
             <p className="text-2xl font-bold">{totalStock.toLocaleString()} kg</p>
-            <p className="text-xs text-muted-foreground">Total Stok</p>
+            <p className="text-xs text-muted-foreground">Total Stok ({Math.floor(totalStock / 50)} karung{totalStock % 50 > 0 ? ` + ${Math.round(totalStock % 50)} kg` : ""})</p>
             <p className="text-[11px] text-muted-foreground">Nilai: Rp {totalValue.toLocaleString("id-ID")}</p>
           </div>
         </CardContent></Card>
@@ -160,11 +160,12 @@ export default function FeedPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Feed Type</TableHead>
-                      <TableHead>Sisa Stok</TableHead>
-                      <TableHead>Unit</TableHead>
+                      <TableHead>Beli</TableHead>
+                      <TableHead>Terpakai</TableHead>
+                      <TableHead>Sisa</TableHead>
                       <TableHead>Cost/Unit</TableHead>
                       <TableHead>Supplier</TableHead>
-                      <TableHead>Purchase Date</TableHead>
+                      <TableHead>Tgl Beli</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -173,8 +174,9 @@ export default function FeedPage() {
                     {inventory.map(feed => (
                       <TableRow key={feed.id}>
                         <TableCell className="font-medium">{feed.feedType}</TableCell>
-                        <TableCell>{feed.quantity.toLocaleString()}</TableCell>
-                        <TableCell>{feed.unit}</TableCell>
+                        <TableCell>{(feed.initialQuantity || feed.quantity).toLocaleString()} {feed.unit}</TableCell>
+                        <TableCell className="text-orange-400">{(feed.totalUsed || 0).toLocaleString()} {feed.unit}</TableCell>
+                        <TableCell className={feed.quantity < 50 ? "text-red-400 font-semibold" : "text-green-400 font-semibold"}>{feed.quantity.toLocaleString()} {feed.unit}</TableCell>
                         <TableCell>{formatCurrency(feed.costPerUnit)}</TableCell>
                         <TableCell>{feed.supplier || "-"}</TableCell>
                         <TableCell>{formatDate(feed.purchaseDate)}</TableCell>
@@ -196,7 +198,7 @@ export default function FeedPage() {
                       </TableRow>
                     ))}
                     {inventory.length === 0 && (
-                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No feed inventory found.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">No feed inventory found.</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>
@@ -213,17 +215,27 @@ export default function FeedPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>House</TableHead>
-                      <TableHead>Feed Type</TableHead>
-                      <TableHead>Quantity (kg)</TableHead>
-                      <TableHead>Worker</TableHead>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead>Waktu</TableHead>
+                      <TableHead>Kandang</TableHead>
+                      <TableHead>Jenis Pakan</TableHead>
+                      <TableHead>Jumlah (kg)</TableHead>
+                      <TableHead>Pekerja</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {sortedUsage.map((usage: any) => (
                       <TableRow key={usage.id}>
                         <TableCell>{formatDate(usage.date)}</TableCell>
+                        <TableCell>
+                          {usage.timeSlot === "MORNING" ? (
+                            <Badge variant="outline" className="text-amber-400 border-amber-500/30 bg-amber-500/10">Pagi</Badge>
+                          ) : usage.timeSlot === "EVENING" ? (
+                            <Badge variant="outline" className="text-blue-400 border-blue-500/30 bg-blue-500/10">Sore</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground">-</Badge>
+                          )}
+                        </TableCell>
                         <TableCell>{usage.house?.name || usage.houseName || "-"}</TableCell>
                         <TableCell>{usage.feed?.feedType || usage.feedType || "-"}</TableCell>
                         <TableCell>{usage.quantity}</TableCell>
@@ -231,7 +243,7 @@ export default function FeedPage() {
                       </TableRow>
                     ))}
                     {sortedUsage.length === 0 && (
-                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No usage records found.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No usage records found.</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>

@@ -51,6 +51,9 @@ export const api = {
     if (userId) params.set("userId", userId);
     return fetchJSON<any[]>(`/attendance?${params}`);
   },
+  getAttendanceRange: (from: string, to: string) => {
+    return fetchJSON<any[]>(`/attendance?from=${from}&to=${to}`);
+  },
   checkIn: (userId: string) => fetchJSON("/attendance", { method: "POST", body: JSON.stringify({ userId, type: "CHECK_IN" }) }),
   checkOut: (userId: string) => fetchJSON("/attendance", { method: "POST", body: JSON.stringify({ userId, type: "CHECK_OUT" }) }),
   undoCheckOut: (userId: string, date: string) =>

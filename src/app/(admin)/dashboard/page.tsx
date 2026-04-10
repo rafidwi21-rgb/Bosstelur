@@ -85,13 +85,13 @@ export default function DashboardPage() {
     api.getDashboard().then(setData).catch(console.error);
     const interval = setInterval(() => {
       api.getDashboard().then(setData).catch(console.error);
-    }, 10000);
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
   if (!data) return <div className="flex items-center justify-center h-64"><div className="size-6 animate-spin rounded-full border-2 border-[#1e1e1e] border-t-[#3ecf8e]" /></div>;
 
-  const { totalChickens = 0, totalCapacity = 0, eggsTodayKg = 0, eggsTodayUnit = 0, eggsYesterdayKg = 0, workersPresent = 0, totalWorkers = 0, feedStock = 0, feedUsedToday = 0, avgDailyUsage = 0, feedStockDaysLeft = 0, lowStockFeeds = [], todaysRevenue = 0, monthlyRevenue = 0, monthlyExpenses = 0, expenseByCategory = {}, netProfit = 0, activeHouses = [], recentCheckIns = [], eggChartData = [], feedChartData = [] } = data;
+  const { totalChickens = 0, totalCapacity = 0, eggsTodayKg = 0, eggsTodayUnit = 0, eggsYesterdayKg = 0, eggsMonthlyUnit = 0, eggsMonthlyKg = 0, eggsBrokenMonthly = 0, workersPresent = 0, totalWorkers = 0, feedStock = 0, feedStockKarung = 0, feedStockSisa = 0, feedInitialTotal = 0, feedTotalUsed = 0, feedUsedToday = 0, avgDailyUsage = 0, feedStockDaysLeft = 0, lowStockFeeds = [], todaysRevenue = 0, monthlyRevenue = 0, monthlyExpenses = 0, expenseByCategory = {}, netProfit = 0, activeHouses = [], recentCheckIns = [], eggChartData = [], feedChartData = [] } = data;
 
   const eggChange = eggsYesterdayKg > 0 ? Math.round(((eggsTodayKg - eggsYesterdayKg) / eggsYesterdayKg) * 100) : 0;
   const profit = netProfit;
@@ -138,13 +138,16 @@ export default function DashboardPage() {
       head: [["Keterangan", "Nilai"]],
       body: [
         ["Produksi Telur Hari Ini", `${eggsTodayKg} kg / ${eggsTodayUnit.toLocaleString()} butir`],
+        ["Produksi Bulan Ini", `${eggsMonthlyKg} kg / ${eggsMonthlyUnit.toLocaleString()} butir (${eggsBrokenMonthly} pecah)`],
         ["Produksi Kemarin", `${eggsYesterdayKg} kg`],
         ["Perubahan Produksi", `${eggChange >= 0 ? "+" : ""}${eggChange}%`],
         ["Pekerja Hadir", `${workersPresent} / ${totalWorkers}`],
         ["Total Ayam", `${totalChickens.toLocaleString()} ekor`],
         ["Kapasitas Terisi", `${totalCapacity > 0 ? Math.round((totalChickens / totalCapacity) * 100) : 0}%`],
         ["Kandang Aktif", `${activeHouses.length}`],
-        ["Stok Pakan", `${feedStock} kg`],
+        ["Stok Pakan", `${feedStock} kg (${feedStockKarung} karung${feedStockSisa > 0 ? ` + ${feedStockSisa} kg` : ""})`],
+        ["Total Beli Pakan", `${feedInitialTotal} kg`],
+        ["Total Terpakai", `${feedTotalUsed} kg`],
         ["Pakan Terpakai Hari Ini", `${feedUsedToday} kg`],
         ["Rata-rata Pakan/Hari", `${avgDailyUsage} kg`],
         ["Estimasi Stok Pakan", `${feedStockDaysLeft > 999 ? "∞" : feedStockDaysLeft} hari`],
@@ -352,6 +355,9 @@ export default function DashboardPage() {
             <span className="text-neutral-500 text-sm">butir</span>
           </div>
           <p className="text-[11px] text-neutral-600 mt-2">Kemarin: {eggsYesterdayKg} kg</p>
+          <div className="mt-2 pt-2 border-t border-neutral-800/50">
+            <p className="text-[11px] text-neutral-500">Bulan ini: <span className="text-neutral-300 font-medium">{eggsMonthlyUnit.toLocaleString()} butir</span> ({eggsMonthlyKg} kg) &middot; <span className="text-red-400">{eggsBrokenMonthly} pecah</span></p>
+          </div>
         </div>
 
         {/* Revenue + Expenses + Net Profit — stacked */}
@@ -420,11 +426,12 @@ export default function DashboardPage() {
               {lowStockFeeds.length > 0 ? <AlertTriangle className="h-3.5 w-3.5 text-red-400" /> : <Wheat className="h-3.5 w-3.5 text-[#3ecf8e]" />}
               <span className="text-[10px] text-neutral-500 uppercase tracking-widest">Stok Pakan</span>
             </div>
-            <p className="text-2xl font-bold text-white">{feedStock} <span className="text-sm text-neutral-600 font-normal">kg</span></p>
-            <p className="text-[11px] text-neutral-600 mt-1">Terpakai hari ini: {feedUsedToday} kg</p>
+            <p className="text-2xl font-bold text-white">{feedStock} <span className="text-sm text-neutral-600 font-normal">kg</span> <span className="text-sm text-neutral-500 font-normal">({feedStockKarung} karung{feedStockSisa > 0 ? ` + ${feedStockSisa} kg` : ""})</span></p>
+            <p className="text-[11px] text-neutral-600 mt-1">Beli: {feedInitialTotal} kg &middot; Terpakai: {feedTotalUsed} kg</p>
+            <p className="text-[11px] text-neutral-600 mt-0.5">Hari ini: {feedUsedToday} kg &middot; Rata-rata: {avgDailyUsage} kg/hari</p>
             {avgDailyUsage > 0 && (
               <p className={`text-[11px] mt-0.5 ${feedStockDaysLeft <= 7 ? "text-red-400 font-medium" : "text-neutral-600"}`}>
-                Estimasi: {feedStockDaysLeft} hari lagi
+                Estimasi habis: {feedStockDaysLeft} hari lagi
               </p>
             )}
           </div>

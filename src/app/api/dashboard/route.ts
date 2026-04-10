@@ -164,7 +164,7 @@ export async function GET() {
     );
     const unlinkedFeedCost = monthlyFeedPurchases
       .filter(f => !linkedFeedIds.has(f.id))
-      .reduce((sum, f) => sum + f.quantity * f.costPerUnit, 0);
+      .reduce((sum, f) => sum + (f.initialQuantity || f.quantity) * f.costPerUnit, 0);
 
     const monthlyExpenses = operationalTotal + unlinkedFeedCost;
 
@@ -277,15 +277,38 @@ export async function GET() {
 
     const totalCapacity = houses.reduce((sum, h) => sum + h.capacity, 0);
 
+    // Monthly egg totals
+    const monthlyEggs = await prisma.eggProduction.findMany({
+      where: { date: { gte: monthStart, lte: monthEnd } },
+    });
+    const eggsMonthlyGoodUnit = monthlyEggs.reduce((sum, e) => sum + e.goodUnit, 0);
+    const eggsMonthlyKg = monthlyEggs.reduce((sum, e) => sum + e.goodKg, 0);
+    const eggsBrokenMonthly = monthlyEggs.reduce((sum, e) => sum + e.brokenUnit, 0);
+
+    // Feed stock in karung (1 karung = 50 kg)
+    const feedStockKarung = Math.floor(feedStock / 50);
+    const feedStockSisa = Math.round(feedStock % 50);
+
+    // Feed initial purchase total
+    const feedInitialTotal = feedInventory.reduce((sum, f) => sum + (f.initialQuantity || f.quantity), 0);
+    const feedTotalUsed = feedInitialTotal - feedStock;
+
     return NextResponse.json({
       totalChickens,
       totalCapacity,
       eggsTodayKg,
       eggsTodayUnit,
       eggsYesterdayKg,
+      eggsMonthlyUnit: eggsMonthlyGoodUnit,
+      eggsMonthlyKg,
+      eggsBrokenMonthly,
       workersPresent,
       totalWorkers,
       feedStock,
+      feedStockKarung,
+      feedStockSisa,
+      feedInitialTotal,
+      feedTotalUsed,
       feedUsedToday: feedUsedTodayTotal,
       avgDailyUsage: Math.round(avgDailyUsage),
       feedStockDaysLeft,

@@ -120,7 +120,7 @@ export default function WorkerPage() {
 
     if (task.taskType === "FEEDING") {
       upd.feedQuantity = Number(inp.feedQuantity) || 0;
-      if (!isEdit && upd.feedQuantity > 0) {
+      if (upd.feedQuantity > 0) {
         try {
           let feeds = await api.getFeedInventory();
           if (feeds.length === 0) {
@@ -128,16 +128,31 @@ export default function WorkerPage() {
             feeds = await api.getFeedInventory();
           }
           const f = feeds[0];
-          if (f && houseId) await api.createFeedUsage({ feedId: f.id, houseId, usedBy: user.id, date: today, quantity: upd.feedQuantity });
+          if (f && houseId) {
+            await api.createFeedUsage({
+              feedId: f.id,
+              houseId,
+              usedBy: user.id,
+              date: today,
+              quantity: upd.feedQuantity,
+              timeSlot: task.timeSlot || "MORNING",
+              taskAssignmentId: task.id,
+            });
+          }
         } catch (e) { console.error("Feed usage error:", e); }
       }
     }
     if (task.taskType === "EGG_COLLECTION") {
       const kg = Number(inp.eggsKg) || 0, unit = Number(inp.eggsUnit) || 0, bu = Number(inp.eggsBrokenUnit) || 0;
       upd.eggsKg = kg; upd.eggsUnit = unit; upd.eggsBrokenUnit = bu;
-      if (!isEdit && (kg > 0 || unit > 0)) {
+      if (kg > 0 || unit > 0) {
         try {
-          if (houseId) await api.createProduction({ houseId, collectedBy: user.id, date: today, totalKg: kg, totalUnit: unit, brokenKg: 0, brokenUnit: bu, goodKg: kg, goodUnit: unit - bu });
+          if (houseId) await api.createProduction({
+            houseId, collectedBy: user.id, date: today,
+            totalKg: kg, totalUnit: unit, brokenKg: 0, brokenUnit: bu,
+            goodKg: kg, goodUnit: Math.max(0, unit - bu),
+            taskAssignmentId: task.id,
+          });
         } catch (e) { console.error("Production error:", e); }
       }
     }

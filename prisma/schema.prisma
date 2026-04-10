@@ -113,17 +113,18 @@ model TaskAssignment {
 }
 
 model EggProduction {
-  id          String   @id @default(cuid())
-  houseId     String
-  collectedBy String
-  date        DateTime @db.Date
-  totalKg     Float
-  totalUnit   Int      @default(0)
-  brokenKg    Float    @default(0)
-  brokenUnit  Int      @default(0)
-  goodKg      Float    @default(0)
-  goodUnit    Int      @default(0)
-  createdAt   DateTime @default(now())
+  id               String   @id @default(cuid())
+  houseId          String
+  collectedBy      String
+  date             DateTime @db.Date
+  totalKg          Float
+  totalUnit        Int      @default(0)
+  brokenKg         Float    @default(0)
+  brokenUnit       Int      @default(0)
+  goodKg           Float    @default(0)
+  goodUnit         Int      @default(0)
+  taskAssignmentId String?  @unique
+  createdAt        DateTime @default(now())
 
   house     PoultryHouse @relation(fields: [houseId], references: [id])
   collector User         @relation(fields: [collectedBy], references: [id])
@@ -132,15 +133,16 @@ model EggProduction {
 }
 
 model FeedInventory {
-  id           String    @id @default(cuid())
-  feedType     String
-  quantity     Float
-  unit         String    @default("kg")
-  costPerUnit  Float
-  supplier     String?
-  purchaseDate DateTime  @db.Date
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  feedType        String
+  quantity        Float
+  initialQuantity Float     @default(0)
+  unit            String    @default("kg")
+  costPerUnit     Float
+  supplier        String?
+  purchaseDate    DateTime  @db.Date
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   usages FeedUsage[]
 
@@ -148,14 +150,16 @@ model FeedInventory {
 }
 
 model FeedUsage {
-  id        String   @id @default(cuid())
-  feedId    String
-  houseId   String
-  usedBy    String
-  date      DateTime @db.Date
-  quantity  Float
-  notes     String?
-  createdAt DateTime @default(now())
+  id               String   @id @default(cuid())
+  feedId           String
+  houseId          String
+  usedBy           String
+  date             DateTime @db.Date
+  quantity         Float
+  timeSlot         String?
+  taskAssignmentId String?  @unique
+  notes            String?
+  createdAt        DateTime @default(now())
 
   feed   FeedInventory @relation(fields: [feedId], references: [id])
   house  PoultryHouse  @relation(fields: [houseId], references: [id])

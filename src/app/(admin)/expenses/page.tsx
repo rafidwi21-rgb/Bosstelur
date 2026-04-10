@@ -44,7 +44,7 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     reload();
-    const interval = setInterval(reload, 10000);
+    const interval = setInterval(reload, 30000);
     return () => clearInterval(interval);
   }, []);
 

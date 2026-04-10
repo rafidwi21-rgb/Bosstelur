@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { feedId, houseId, usedBy, date, quantity } = body;
+    const { feedId, houseId, usedBy, date, quantity, timeSlot, taskAssignmentId } = body;
 
     if (!feedId || !houseId || !usedBy || !date || quantity === undefined) {
       return NextResponse.json(
@@ -54,7 +54,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create usage record and decrease inventory quantity
+    // If taskAssignmentId provided, check if usage already exists (edit scenario)
+    if (taskAssignmentId) {
+      const existing = await prisma.feedUsage.findUnique({
+        where: { taskAssignmentId },
+      });
+
+      if (existing) {
+        // Update existing usage and adjust inventory
+        const diff = quantity - existing.quantity;
+        const [usage] = await prisma.$transaction([
+          prisma.feedUsage.update({
+            where: { taskAssignmentId },
+            data: { quantity, timeSlot: timeSlot || existing.timeSlot },
+            include: {
+              feed: { select: { feedType: true } },
+              house: { select: { name: true } },
+              worker: { select: { name: true } },
+            },
+          }),
+          prisma.feedInventory.update({
+            where: { id: existing.feedId },
+            data: { quantity: { decrement: diff } },
+          }),
+        ]);
+        return NextResponse.json(usage);
+      }
+    }
+
+    // Create new usage record and decrease inventory quantity
     const [usage] = await prisma.$transaction([
       prisma.feedUsage.create({
         data: {
@@ -63,17 +91,13 @@ export async function POST(request: NextRequest) {
           usedBy,
           date: new Date(date),
           quantity,
+          timeSlot: timeSlot || null,
+          taskAssignmentId: taskAssignmentId || null,
         },
         include: {
-          feed: {
-            select: { feedType: true },
-          },
-          house: {
-            select: { name: true },
-          },
-          worker: {
-            select: { name: true },
-          },
+          feed: { select: { feedType: true } },
+          house: { select: { name: true } },
+          worker: { select: { name: true } },
         },
       }),
       prisma.feedInventory.update({

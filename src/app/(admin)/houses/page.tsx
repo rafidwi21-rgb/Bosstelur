@@ -57,7 +57,7 @@ export default function HousesPage() {
   useEffect(() => {
     const load = () => api.getHouses().then(setHouses).catch(console.error);
     load();
-    const interval = setInterval(load, 10000);
+    const interval = setInterval(load, 30000);
     return () => clearInterval(interval);
   }, []);
 

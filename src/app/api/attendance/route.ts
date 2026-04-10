@@ -5,6 +5,8 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get("date");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
     const userId = searchParams.get("userId");
 
     const where: Record<string, unknown> = {};
@@ -13,10 +15,12 @@ export async function GET(request: NextRequest) {
       // WIB is UTC+7, so WIB midnight = UTC 17:00 previous day
       const startOfDay = new Date(`${date}T00:00:00+07:00`);
       const endOfDay = new Date(`${date}T23:59:59.999+07:00`);
-      where.timestamp = {
-        gte: startOfDay,
-        lte: endOfDay,
-      };
+      where.timestamp = { gte: startOfDay, lte: endOfDay };
+    } else if (from || to) {
+      const tsFilter: Record<string, Date> = {};
+      if (from) tsFilter.gte = new Date(`${from}T00:00:00+07:00`);
+      if (to) tsFilter.lte = new Date(`${to}T23:59:59.999+07:00`);
+      where.timestamp = tsFilter;
     }
 
     if (userId) {
@@ -53,6 +57,30 @@ export async function POST(request: NextRequest) {
         { error: "userId and type are required" },
         { status: 400 }
       );
+    }
+
+    // Prevent duplicate: check if same type already exists for this user today
+    const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+    const startOfDay = new Date(`${today}T00:00:00+07:00`);
+    const endOfDay = new Date(`${today}T23:59:59.999+07:00`);
+
+    const existing = await prisma.attendance.findFirst({
+      where: {
+        userId,
+        type: type as "CHECK_IN" | "CHECK_OUT",
+        timestamp: { gte: startOfDay, lte: endOfDay },
+      },
+      include: { user: { select: { name: true } } },
+    });
+
+    if (existing) {
+      // Already exists, update timestamp instead of creating duplicate
+      const updated = await prisma.attendance.update({
+        where: { id: existing.id },
+        data: { timestamp: new Date() },
+        include: { user: { select: { name: true } } },
+      });
+      return NextResponse.json(updated);
     }
 
     const attendance = await prisma.attendance.create({

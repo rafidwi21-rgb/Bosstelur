@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
       brokenUnit,
       goodKg,
       goodUnit,
+      taskAssignmentId,
     } = body;
 
     if (!houseId || !collectedBy || !date) {
@@ -64,6 +65,34 @@ export async function POST(request: NextRequest) {
         { error: "houseId, collectedBy, and date are required" },
         { status: 400 }
       );
+    }
+
+    const includeOpts = {
+      house: { select: { name: true } },
+      collector: { select: { name: true } },
+    };
+
+    // If taskAssignmentId provided, check for existing (edit scenario)
+    if (taskAssignmentId) {
+      const existing = await prisma.eggProduction.findUnique({
+        where: { taskAssignmentId },
+      });
+
+      if (existing) {
+        const updated = await prisma.eggProduction.update({
+          where: { taskAssignmentId },
+          data: {
+            totalKg: totalKg || 0,
+            totalUnit: totalUnit || 0,
+            brokenKg: brokenKg || 0,
+            brokenUnit: brokenUnit || 0,
+            goodKg: goodKg || 0,
+            goodUnit: goodUnit || 0,
+          },
+          include: includeOpts,
+        });
+        return NextResponse.json(updated);
+      }
     }
 
     const production = await prisma.eggProduction.create({
@@ -77,15 +106,9 @@ export async function POST(request: NextRequest) {
         brokenUnit: brokenUnit || 0,
         goodKg: goodKg || 0,
         goodUnit: goodUnit || 0,
+        taskAssignmentId: taskAssignmentId || null,
       },
-      include: {
-        house: {
-          select: { name: true },
-        },
-        collector: {
-          select: { name: true },
-        },
-      },
+      include: includeOpts,
     });
 
     return NextResponse.json(production, { status: 201 });

@@ -32,7 +32,7 @@ export async function POST() {
       if (Math.abs(feed.quantity - correctRemaining) > 0.01) {
         await prisma.feedInventory.update({
           where: { id: feed.id },
-          data: { quantity: correctRemaining },
+          data: { quantity: correctRemaining, initialQuantity: originalQty },
         });
         fixes.push({
           id: feed.id,

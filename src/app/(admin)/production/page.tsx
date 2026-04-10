@@ -36,11 +36,11 @@ export default function ProductionPage() {
       api.getHouses().then(setHouses).catch(console.error);
     };
     load();
-    const interval = setInterval(load, 10000);
+    const interval = setInterval(load, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  const today = store.todayStr();
+  const currentMonth = store.todayStr().slice(0, 7);
 
   const filtered = useMemo(() => {
     let data = [...production];
@@ -52,30 +52,44 @@ export default function ProductionPage() {
     return data;
   }, [production, dateFrom, dateTo, houseFilter]);
 
-  const todayRecords = useMemo(
-    () => production.filter((p) => p.date === today),
-    [production, today]
+  const monthlyRecords = useMemo(
+    () => production.filter((p) => (p.date || "").startsWith(currentMonth)),
+    [production, currentMonth]
   );
 
-  const totalToday = useMemo(
-    () => todayRecords.reduce((sum, p) => sum + p.totalKg, 0),
-    [todayRecords]
+  const totalMonthlyUnit = useMemo(
+    () => monthlyRecords.reduce((sum, p) => sum + (p.goodUnit || 0), 0),
+    [monthlyRecords]
+  );
+
+  const totalMonthlyKg = useMemo(
+    () => monthlyRecords.reduce((sum, p) => sum + (p.totalKg || 0), 0),
+    [monthlyRecords]
+  );
+
+  const totalBrokenMonthly = useMemo(
+    () => monthlyRecords.reduce((sum, p) => sum + (p.brokenUnit || 0), 0),
+    [monthlyRecords]
   );
 
   const avgDaily = useMemo(() => {
     if (production.length === 0) return 0;
     const dates = new Set(production.map((p) => p.date));
-    const total = production.reduce((sum, p) => sum + p.totalKg, 0);
-    return Math.round(total / dates.size);
+    const totalUnit = production.reduce((sum, p) => sum + (p.totalUnit || 0), 0);
+    return Math.round(totalUnit / dates.size);
   }, [production]);
 
-  const bestHouseToday = useMemo(() => {
-    if (todayRecords.length === 0) return "-";
-    const best = todayRecords.reduce((prev, curr) =>
-      curr.totalKg > prev.totalKg ? curr : prev
-    );
-    return `${best.houseName} (${best.totalKg})`;
-  }, [todayRecords]);
+  const bestHouseMonthly = useMemo(() => {
+    if (monthlyRecords.length === 0) return "-";
+    const byHouse: Record<string, { name: string; total: number }> = {};
+    monthlyRecords.forEach((r) => {
+      const key = r.houseId;
+      if (!byHouse[key]) byHouse[key] = { name: r.houseName || r.house?.name || "-", total: 0 };
+      byHouse[key].total += r.totalUnit || 0;
+    });
+    const best = Object.values(byHouse).sort((a, b) => b.total - a.total)[0];
+    return best ? `${best.name} (${best.total} butir)` : "-";
+  }, [monthlyRecords]);
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -87,39 +101,52 @@ export default function ProductionPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="flex items-center gap-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-600">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-400">
               <Egg className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{totalToday.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">Total Today</p>
+              <p className="text-2xl font-bold">{totalMonthlyUnit.toLocaleString()} <span className="text-sm font-normal text-muted-foreground">butir</span></p>
+              <p className="text-xs text-muted-foreground">Total Bagus Bulan Ini</p>
+              {totalMonthlyKg > 0 && <p className="text-[11px] text-muted-foreground">{totalMonthlyKg} kg</p>}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="flex items-center gap-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-500/10 text-red-400">
+              <Egg className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{totalBrokenMonthly.toLocaleString()} <span className="text-sm font-normal text-muted-foreground">butir</span></p>
+              <p className="text-xs text-muted-foreground">Pecah Bulan Ini</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-400">
               <TrendingUp className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{avgDaily.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">Average Daily</p>
+              <p className="text-2xl font-bold">{avgDaily.toLocaleString()} <span className="text-sm font-normal text-muted-foreground">butir</span></p>
+              <p className="text-xs text-muted-foreground">Rata-rata Harian</p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="flex items-center gap-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-400">
               <Home className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{bestHouseToday}</p>
-              <p className="text-xs text-muted-foreground">Best House Today</p>
+              <p className="text-2xl font-bold">{bestHouseMonthly}</p>
+              <p className="text-xs text-muted-foreground">Kandang Terbaik</p>
             </div>
           </CardContent>
         </Card>
@@ -177,38 +204,42 @@ export default function ProductionPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>House</TableHead>
-              <TableHead>Collector</TableHead>
-              <TableHead className="text-right">Total Kg</TableHead>
-              <TableHead className="text-right">Broken Kg</TableHead>
-              <TableHead className="text-right">Good Kg</TableHead>
+              <TableHead>Tanggal</TableHead>
+              <TableHead>Kandang</TableHead>
+              <TableHead>Pekerja</TableHead>
+              <TableHead className="text-right">Total (butir)</TableHead>
+              <TableHead className="text-right">Total (kg)</TableHead>
+              <TableHead className="text-right">Pecah (butir)</TableHead>
+              <TableHead className="text-right">Bagus (butir)</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="text-center text-muted-foreground"
                 >
-                  No production records found.
+                  Belum ada data produksi.
                 </TableCell>
               </TableRow>
             ) : (
               filtered.map((record) => (
                 <TableRow key={record.id}>
                   <TableCell>{record.date}</TableCell>
-                  <TableCell>{record.houseName}</TableCell>
-                  <TableCell>{record.collectorName}</TableCell>
-                  <TableCell className="text-right">
-                    {record.totalKg}
+                  <TableCell>{record.houseName || record.house?.name || "-"}</TableCell>
+                  <TableCell>{record.collectorName || record.collector?.name || "-"}</TableCell>
+                  <TableCell className="text-right font-medium">
+                    {record.totalUnit || 0}
                   </TableCell>
                   <TableCell className="text-right">
-                    {record.brokenKg}
+                    {record.totalKg || 0}
                   </TableCell>
-                  <TableCell className="text-right">
-                    {record.goodKg}
+                  <TableCell className="text-right text-red-400">
+                    {record.brokenUnit || 0}
+                  </TableCell>
+                  <TableCell className="text-right text-green-400">
+                    {record.goodUnit || 0}
                   </TableCell>
                 </TableRow>
               ))
