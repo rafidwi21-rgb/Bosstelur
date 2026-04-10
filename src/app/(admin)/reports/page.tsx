@@ -50,16 +50,28 @@ export default function ReportsPage() {
   const [expenses, setExpenses] = useState<any[]>([]);
 
   useEffect(() => {
-    Promise.all([
-      api.getHouses().then(setHouses),
-      api.getProduction().then(setProduction),
-      api.getFeedUsage().then(setFeedUsage),
-      api.getFeedInventory().then(setFeedInventory),
-      api.getSales().then(setSales),
-      api.getAttendance().then(setAttendance),
-      api.getExpenses().then(setExpenses),
-    ]).catch(console.error);
-  }, []);
+    // Only fetch data needed for the current report type
+    const fetches: Promise<void>[] = [api.getHouses().then(setHouses)];
+
+    if (reportType === "Production" || reportType === "Profit") {
+      fetches.push(api.getProduction(dateFrom, dateTo).then(setProduction));
+    }
+    if (reportType === "Feed" || reportType === "Profit") {
+      fetches.push(api.getFeedUsage(dateFrom, dateTo).then(setFeedUsage));
+      fetches.push(api.getFeedInventory().then(setFeedInventory));
+    }
+    if (reportType === "Sales" || reportType === "Profit") {
+      fetches.push(api.getSales(dateFrom, dateTo).then(setSales));
+    }
+    if (reportType === "Attendance") {
+      fetches.push(api.getAttendanceRange(dateFrom, dateTo).then(setAttendance));
+    }
+    if (reportType === "Expenses" || reportType === "Profit") {
+      fetches.push(api.getExpenses(dateFrom, dateTo).then(setExpenses));
+    }
+
+    Promise.all(fetches).catch(console.error);
+  }, [reportType, dateFrom, dateTo]);
 
   function inRange(date: string) {
     const d = toDateStr(date);
